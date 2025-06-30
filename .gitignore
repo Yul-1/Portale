@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.[oa]
+*.so
+
+# C extensions
+*.pyd
+*.dll
+
+# Dependencies
+node_modules/
+/build/
+/dist/
+
+# IDE / Editor specific
+.vscode/
+.idea/
+*.swp
+
+# Environment variables
+.env*
+!.env.example
+
+# Secrets - NON CARICARE MAI QUESTA CARTELLA!
+/secrets/
+*.pem
+*.key
+
+# Docker
+postgres_data/
+media_volume/
+static_volume/
+
+# Log files
+*.log
+
+# Backup files
+*.backup

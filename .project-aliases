@@ -1,0 +1,21 @@
+# Alias per il Portale Prenotazioni
+alias dc='./dc-secure'
+alias dc-up='./dc-secure up -d'
+alias dc-down='./dc-secure down'
+alias dc-logs='./dc-secure logs -f'
+alias dc-ps='./dc-secure ps'
+alias dc-restart='./dc-secure restart'
+alias dc-build='./dc-secure build'
+
+# Alias per comandi frequenti
+alias portale-status='./dc-secure ps'
+alias portale-logs='./dc-secure logs -f --tail=100'
+alias portale-restart='./restart-secure.sh'
+alias portale-backup='./backup-secure.sh'
+alias portale-monitor='./security-monitor.sh'
+
+# Alias per accesso ai container
+alias portale-backend='./dc-secure exec backend bash'
+alias portale-frontend='./dc-secure exec frontend sh'
+alias portale-db='./dc-secure exec db psql -U portale_user -d portale_db'
+alias portale-redis='./dc-secure exec redis redis-cli'

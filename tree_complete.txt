@@ -1,0 +1,76 @@
+.
+├── backend
+│   ├── api
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── fixtures
+│   │   │   └── initial_data.json
+│   │   ├── __init__.py
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   └── __init__.py
+│   │   ├── models.py
+│   │   ├── serializers.py
+│   │   ├── tests.py
+│   │   ├── urls.py
+│   │   └── views.py
+│   ├── app
+│   ├── config
+│   │   ├── __init__.py
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   ├── Dockerfile.secure
+│   ├── entrypoint.sh
+│   ├── manage.py
+│   ├── media
+│   ├── migrations
+│   ├── requirements.txt
+│   ├── static
+│   └── templates
+├── backup-secure.sh
+├── database
+│   └── init
+│       └── 01_init.sql
+├── dc-secure
+├── debug-nginx.sh
+├── docker-compose.secure.yml
+├── docker-compose.secure.yml.backup
+├── docs
+├── frontend
+│   ├── Dockerfile.secure
+│   ├── Dockerfile.secure.backup
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── public
+│   │   ├── index.html
+│   │   └── index.html.backup
+│   └── src
+│       ├── App.css
+│       ├── App.js
+│       ├── App.js.backup
+│       ├── components
+│       ├── global.d.ts
+│       ├── index.css
+│       ├── index.js
+│       ├── pages
+│       │   ├── AlloggioDetail.module.css
+│       │   ├── AlloggioDetail.tsx
+│       │   ├── HomePage.module.css
+│       │   └── HomePage.tsx
+│       ├── services
+│       │   └── api.ts
+│       └── utils
+├── nginx
+│   ├── conf.d
+│   │   └── secure.conf
+│   └── nginx.secure.conf
+├── restart-secure.sh
+├── security-monitor.sh
+├── setup-aliases.sh
+├── setup-secrets.sh
+├── start-secure.sh
+├── tests
+└── tree_complete.txt
+
+24 directories, 50 files
