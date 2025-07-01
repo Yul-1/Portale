@@ -1,0 +1,86 @@
+.
+├── archived
+│   └── 20250701
+├── backend
+│   ├── api
+│   ├── app
+│   ├── config
+│   ├── db
+│   ├── Dockerfile
+│   ├── entrypoint.sh
+│   ├── logs
+│   ├── manage.py
+│   ├── media
+│   ├── migrations
+│   ├── requirements
+│   ├── static
+│   ├── staticfiles
+│   └── templates
+├── backups
+├── database
+│   ├── .env
+│   └── init
+├── debug-nginx.sh
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml
+├── docker-compose.secure.yml.backup
+├── docker-compose.yml
+├── docs
+├── .env
+├── .env.example
+├── .env.production
+├── frontend
+│   ├── Dockerfile
+│   ├── Dockerfile.secure.backup
+│   ├── node_modules
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── public
+│   └── src
+├── .git
+│   ├── branches
+│   ├── COMMIT_EDITMSG
+│   ├── config
+│   ├── description
+│   ├── FETCH_HEAD
+│   ├── HEAD
+│   ├── hooks
+│   ├── index
+│   ├── info
+│   ├── logs
+│   ├── objects
+│   ├── ORIG_HEAD
+│   ├── packed-refs
+│   └── refs
+├── .gitignore
+├── logs
+├── nginx
+│   ├── conf.d
+│   ├── nginx.conf
+│   └── ssl
+├── obsolete
+│   ├── backup-secure.sh.obsolete
+│   ├── dc-secure.obsolete
+│   ├── docker-compose.secure.yml.obsolete
+│   ├── restart-secure.sh.obsolete
+│   ├── secure.conf.obsolete
+│   ├── security-monitor.sh.obsolete
+│   ├── setup-aliases.sh.obsolete
+│   └── start-secure.sh.obsolete
+├── scripts
+│   ├── aliases.sh
+│   ├── migrate-project.sh
+│   └── start-dev.sh
+├── secrets
+│   ├── db_password.txt
+│   ├── db_user.txt
+│   ├── django_secret_key.txt
+│   ├── redis_password.txt
+│   └── ssl
+├── setup-secrets.sh
+├── tests
+├── tree_complete.txt
+├── tree-debug.txt
+└── tree.txt
+
+39 directories, 45 files

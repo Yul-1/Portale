@@ -9,3 +9,10 @@ services:
   frontend:
     # Sovrascrive il CMD del Dockerfile per usare il server di sviluppo di React
     command: npm start
+    environment:
+      # Fix WebSocket per hot-reload attraverso nginx SSL
+      - WDS_SOCKET_HOST=localhost
+      - WDS_SOCKET_PORT=443
+      - WDS_SOCKET_PATH=/ws
+      - HTTPS=true
+      - WDS_SOCKET_PROTOCOL=wss
