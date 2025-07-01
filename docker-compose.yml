@@ -6,11 +6,10 @@ services:
   db:
     image: postgres:15-alpine
     container_name: portale_db
-    env_file: .env # <-- AGGIUNTO QUI
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: portale_db
+      POSTGRES_USER: portale_user
+      POSTGRES_PASSWORD: portale_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/01_init.sql

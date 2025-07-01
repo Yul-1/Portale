@@ -13,6 +13,7 @@ env/
 secrets/
 *.pem
 *.key
+database/.env
 
 # File obsoleti e archiviati
 obsolete/
