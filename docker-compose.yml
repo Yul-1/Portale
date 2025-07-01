@@ -42,7 +42,16 @@ services:
     build:
       context: ./backend
     container_name: portale_backend
-    env_file: .env # <-- GIÀ PRESENTE MA ORA È UNIFICATO
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_DEBUG=${DJANGO_DEBUG}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}    
     volumes:
       - ./backend:/app
       - static_volume:/app/staticfiles
