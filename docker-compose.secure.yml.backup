@@ -1,0 +1,174 @@
+
+# Definizione dei secrets
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  db_user:
+    file: ./secrets/db_user.txt
+  django_secret_key:
+    file: ./secrets/django_secret_key.txt
+  ssl_cert:
+    file: ./secrets/ssl/cert.pem
+  ssl_key:
+    file: ./secrets/ssl/key.pem
+
+services:
+  # Database PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: portale_db
+    restart: unless-stopped
+    # Rimuovi ports in produzione - accesso solo interno
+    # ports:
+    #   - "5432:5432"
+    environment:
+      POSTGRES_DB: portale_db
+      POSTGRES_USER: portale_user
+      POSTGRES_PASSWORD: changeme
+    # secrets:
+    #   - db_user
+    #   - db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - portale_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portale_user -d portale_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Esegui come utente non-root
+    # user: "999:999"
+
+  # Backend Python/Django
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.secure
+    container_name: portale_backend
+    restart: unless-stopped
+    command: gunicorn --bind 0.0.0.0:8000 config.wsgi:application
+    volumes:
+      - ./backend:/app  # Rimuovi :ro per sviluppo
+      - static_volume:/static
+      - media_volume:/media
+    # Nessuna porta esposta - solo accesso tramite nginx
+    # ports:
+    #   - "8000:8000"
+    environment:
+      - DEBUG=False
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/portale_db
+    secrets:
+      - db_user
+      - db_password
+      - django_secret_key
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - portale_network
+    # Esegui come utente non-root (definito nel Dockerfile)
+    user: "1000:1000"
+    # Limiti di risorse
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.secure
+    container_name: portale_frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend/build:/app/build:ro  # Solo build in produzione
+    # Nessuna porta esposta - solo accesso tramite nginx
+    # ports:
+    #   - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=/api
+    networks:
+      - portale_network
+    # Esegui come utente non-root
+    user: "1001:1001"
+    # Limiti di risorse
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+
+  # Nginx Reverse Proxy con SSL
+  nginx:
+    image: nginx:alpine
+    container_name: portale_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.secure.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - static_volume:/static:ro
+      - media_volume:/media:ro
+      # Certificati SSL
+      - ./secrets/ssl:/etc/nginx/ssl:ro
+      # DH params per sicurezza SSL
+      - ./secrets/ssl/dhparam.pem:/etc/nginx/dhparam.pem:ro
+    secrets:
+      - ssl_cert
+      - ssl_key
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - portale_network
+    # Esegui come utente non-root - commentato per nginx
+    # user: "101:101"
+    # Limiti di risorse
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+  # Redis per cache e Celery
+  redis:
+    image: redis:7-alpine
+    container_name: portale_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme}
+    volumes:
+      - redis_data:/data
+    networks:
+      - portale_network
+    # Esegui come utente non-root
+    user: "999:999"
+
+volumes:
+  postgres_data:
+    driver: local
+  static_volume:
+    driver: local
+  media_volume:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  portale_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
