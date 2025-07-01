@@ -1,40 +1,28 @@
+# Contenuto PULITO E DEFINITIVO per lo sviluppo
 version: '3.8'
 
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        USER_ID: ${USER_ID:-1000}
-        GROUP_ID: ${GROUP_ID:-1000}
-    command: >
-      sh -c "
-        # Attendi che i permessi siano corretti prima di procedere
-        until chown -R portale:portale /app/static /app/media /app/logs; do
-          echo 'Waiting for volumes to be ready...'
-          sleep 2
-        done &&
-
-        echo 'Waiting for database...'
-        while ! nc -z db 5432; do sleep 1; done
-        echo 'Database ready!' &&
-
-        python manage.py migrate &&
-        python manage.py collectstatic --noinput --clear &&
-        python manage.py runserver 0.0.0.0:8000
-      "
-    environment:
-      - DEBUG=True
-      - ENVIRONMENT=development
-      - CREATE_SUPERUSER=true
-
+    # Sovrascrive il CMD del Dockerfile per usare il server di sviluppo di Django
+    command: python manage.py runserver 0.0.0.0:8000
+    
   frontend:
+    # Sovrascrive il CMD del Dockerfile per usare il server di sviluppo di React
     command: npm start
     environment:
-      - NODE_ENV=development
-
+      # Fix WebSocket per hot-reload attraverso nginx SSL
+      - WDS_SOCKET_HOST=localhost
+      - WDS_SOCKET_PORT=443
+      - WDS_SOCKET_PATH=/ws
+      - HTTPS=true
+      - WDS_SOCKET_PROTOCOL=wss
+  
   nginx:
-    ports:
-      - "80:80"
-      - "443:443"
+    # USA LA CONFIGURAZIONE DI SVILUPPO
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - static_volume:/var/www/static
+      - media_volume:/var/www/media
+      - nginx_logs:/var/log/nginx

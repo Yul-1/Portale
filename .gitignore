@@ -9,7 +9,8 @@ venv/
 env/
 
 # File di configurazione locale e segreti
-.env*
+.env
+.env.production
 secrets/
 *.pem
 *.key

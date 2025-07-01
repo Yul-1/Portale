@@ -2,9 +2,11 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key')
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = ['*']
+
+# Security - READ FROM ENVIRONMENT
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key-change-in-production')
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -17,7 +19,6 @@ INSTALLED_APPS = [
     'corsheaders',           
     'drf_spectacular',       
     'api.apps.ApiConfig',  
-
 ]
 
 MIDDLEWARE = [
@@ -34,14 +35,15 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# Database - READ FROM ENVIRONMENT
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'portale_db',
-        'USER': 'portale_user',
-        'PASSWORD': 'changeme',
-        'HOST': 'db',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'portale_db'),
+        'USER': os.environ.get('DB_USER', 'portale_user'), 
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'changeme'),
+        'HOST': os.environ.get('DB_HOST', 'db'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -51,9 +53,9 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-STATIC_ROOT = '/static'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -75,19 +77,15 @@ REST_FRAMEWORK = {
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
-CORS_ALLOWED_ORIGINS = [
-    "https://localhost",
-    "https://localhost:443",
-    "http://localhost:3000",  
-]
-
+# CORS - READ FROM ENVIRONMENT
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,https://localhost').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [], # Puoi aggiungere qui directory di template personalizzate, per ora la lasciamo vuota
-        'APP_DIRS': True, # Questa è la riga cruciale che dice a Django di cercare i template all'interno delle directory 'templates' delle app installate.
+        'DIRS': [],
+        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
