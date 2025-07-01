@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    command: >
+      sh -c "
+        echo 'Waiting for database...'
+        while ! nc -z db 5432; do sleep 1; done
+        echo 'Database ready!'
+        
+        python manage.py wait_for_db &&
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        python manage.py runserver 0.0.0.0:8000
+      "
+    environment:
+      - DEBUG=True
+      - ENVIRONMENT=development
+      - CREATE_SUPERUSER=true
+
+  frontend:
+    command: npm start
+    environment:
+      - NODE_ENV=development
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"

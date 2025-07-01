@@ -1,3 +1,0 @@
-#!/bin/bash
-export COMPOSE_FILE=docker-compose.secure.yml
-docker-compose "$@"
