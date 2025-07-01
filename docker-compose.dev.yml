@@ -16,3 +16,13 @@ services:
       - WDS_SOCKET_PATH=/ws
       - HTTPS=true
       - WDS_SOCKET_PROTOCOL=wss
+  
+  nginx:
+    # USA LA CONFIGURAZIONE DI SVILUPPO
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - static_volume:/var/www/static
+      - media_volume:/var/www/media
+      - nginx_logs:/var/log/nginx
