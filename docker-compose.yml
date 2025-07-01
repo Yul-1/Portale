@@ -31,10 +31,11 @@ services:
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-portale_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-portale_user} -d ${DB_NAME:-portale_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine

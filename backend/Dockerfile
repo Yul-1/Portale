@@ -14,14 +14,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Installa dipendenze di sistema - MODIFICATO
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-client \
-    gcc \
-    python3-dev \
-    libpq-dev \
+    postgresql-client gcc python3-dev libpq-dev \
+    libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libgdk-pixbuf2.0-0 libcairo2 \
     curl \
     netcat-openbsd \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Crea utente non-root con ID parametrizzabili - MODIFICATO
 RUN groupadd -r portale -g ${GROUP_ID} && \
@@ -31,12 +28,12 @@ RUN groupadd -r portale -g ${GROUP_ID} && \
 WORKDIR /app
 
 # Copia solo requirements per cache Docker layer
-COPY requirements.txt /app/
+COPY ./requirements /app/requirements
 
 # Installa dipendenze Python come root
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install -r requirements.txt && \
-    pip install --no-cache-dir gunicorn[gthread] requests
+ARG REQUIREMENTS_FILE=prod.txt
+RUN pip install --upgrade pip && \
+    pip install -r /app/requirements/${REQUIREMENTS_FILE}
 
 # Crea le directory necessarie - MODIFICATO
 RUN mkdir -p /app/static /app/media /app/logs /app/staticfiles && \

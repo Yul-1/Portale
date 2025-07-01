@@ -1,0 +1,7 @@
+# Include le dipendenze di base
+-r base.txt
+
+# Strumenti di testing e sviluppo
+pytest==7.4.3
+pytest-django==4.7.0
+factory-boy==3.3.0
