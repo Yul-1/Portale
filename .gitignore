@@ -1,39 +1,48 @@
-# Byte-compiled / optimized / DLL files
+# File generati da Python
 __pycache__/
 *.pyc
-*.[oa]
-*.so
-
-# C extensions
+*.pyo
 *.pyd
-*.dll
 
-# Dependencies
-node_modules/
-/build/
-/dist/
+# Ambienti virtuali
+venv/
+env/
 
-# IDE / Editor specific
-.vscode/
-.idea/
-*.swp
-
-# Environment variables
-.env*
-!.env.example
-
-# Secrets - NON CARICARE MAI QUESTA CARTELLA!
-/secrets/
+# File di configurazione locale e segreti
+.env
+.env.production
+secrets/
 *.pem
 *.key
+database/.env
 
-# Docker
-postgres_data/
-media_volume/
-static_volume/
+# File obsoleti e archiviati
+obsolete/
+archived/
 
-# Log files
+# Dipendenze e build del Frontend
+frontend/node_modules/
+frontend/build/
+frontend/.pnp
+frontend/.pnp.js
+
+# File di log
 *.log
+logs/
+*.log.*
 
-# Backup files
-*.backup
+# File di sistema operativo
+.DS_Store
+Thumbs.db
+
+# File generati da IDE
+.vscode/
+.idea/
+
+# File di database locali (se ne usi uno per test veloci)
+db.sqlite3
+db.sqlite3-journal
+
+# File di backup
+*.bak
+*.swp

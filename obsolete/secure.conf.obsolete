@@ -1,0 +1,143 @@
+upstream backend {
+    server backend:8000;
+}
+
+upstream frontend {
+    server frontend:3000;
+}
+
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+    
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+    
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ... (Nginx config preamble) ...
+
+# HTTPS Server
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name _;
+    
+    # SSL Certificate
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
+    
+    # Logging
+    access_log /var/log/nginx/access.log main;
+    error_log /var/log/nginx/error.log debug;
+    
+    # Rate limiting
+    limit_req zone=general burst=20 nodelay;
+    limit_conn addr 10;
+    
+    # API Backend con rate limiting più alto - VAI ALL'INIZIO!
+    location /api {
+        limit_req zone=api burst=50 nodelay;
+        
+        proxy_pass http://backend;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Timeout per operazioni lunghe
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+    
+    # Admin Django - VAI DOPO /api
+    location /admin {
+        proxy_pass http://backend/admin;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # Django static files - VAI DOPO /admin (o definisci un prefisso più specifico)
+    # Se hai statici Django che iniziano con /static/, devi essere più specifico
+    # o cambiare il prefisso in Django.
+    # Per ora, presumiamo che non ci siano conflitti con /static/ di React.
+    # Se Django serve statici da /static/ e React anche, è un problema.
+    # L'opzione più sicura è usare un prefisso diverso per Django, es. /django_static/
+    #location /static/ {
+    #    alias /static/; # Questo PUNTA al volume static_volume del backend
+    #    expires 30d;
+    #    add_header Cache-Control "public, immutable";
+    #    access_log off;
+    #}
+    
+    # Media files - VAI DOPO /static
+    location /media/ {
+        alias /media/;
+        expires 7d;
+        add_header Cache-Control "public";
+        
+        # Protezione hotlinking
+        valid_referers none blocked server_names ~\.google\. ~\.bing\. ~\.yahoo\.;
+        if ($invalid_referer) {
+            return 403;
+        }
+    }
+
+    # Health check endpoint
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+
+    # Frontend React e tutti gli altri asset (incluse tutte le sue dipendenze JS/CSS)
+    
+    # WebSocket per React hot reload
+    location /ws {
+        proxy_pass http://frontend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Blocca accesso a file sensibili (metti questi prima di location /)
+    location ~ /\. {
+        deny all;
+    }
+    
+    location ~ \.(git|env|yaml|yml|md|py)$ {
+        deny all;
+    }
+
+    # Frontend React e tutti gli altri asset (INCLUSA /static/js/bundle.js)
+    # Questo DEVE essere l'ULTIMO blocco 'location' nel tuo server {}
+    location / {
+        proxy_pass http://frontend; 
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Cruciale per il server di sviluppo React
+        chunked_transfer_encoding off;
+        proxy_buffering off;
+        proxy_cache off;
+    }
+}

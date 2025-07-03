@@ -1,0 +1,5 @@
+# Include le dipendenze di base
+-r base.txt
+
+# Server di produzione
+gunicorn==21.2.0

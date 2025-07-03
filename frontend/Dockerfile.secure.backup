@@ -1,0 +1,40 @@
+FROM node:18-alpine
+
+# Installa dipendenze di sistema necessarie
+RUN apk add --no-cache python3 make g++
+
+# Crea utente non-root prima
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S react -u 1001 -G nodejs
+
+# Crea directory di lavoro
+WORKDIR /app
+
+# Copia package files come root per installazione
+COPY package.json ./
+COPY package-lock.json ./    
+
+# Genera package-lock.json e installa dipendenze
+RUN npm cache clean --force && \
+    npm install --legacy-peer-deps && \
+    npm cache clean --force
+
+# Copia il resto del codice
+COPY --chown=react:nodejs . .
+
+# Crea directory necessarie e imposta permessi
+RUN mkdir -p /app/node_modules/.cache && \
+    chown -R react:nodejs /app
+
+# Cambia a utente non-root
+USER react
+
+# Espone la porta (solo documentazione)
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })"
+
+# Comando di default per sviluppo
+CMD ["npm", "start"]
