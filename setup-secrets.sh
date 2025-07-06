@@ -51,40 +51,42 @@ if [ ! -f secrets/ssl/dhparam.pem ]; then
     chmod 600 secrets/ssl/dhparam.pem
 fi
 
-# Crea file .env.production con riferimenti ai secrets
-cat > .env.production << EOF
-# Produzione - usa Docker secrets
-NODE_ENV=production
-DEBUG=False
-
-# Database - valori letti da secrets
-DB_NAME=portale_db
-DB_HOST=db
-DB_PORT=5432
-
-# Redis
-REDIS_HOST=redis
-REDIS_PORT=6379
-REDIS_PASSWORD=$(generate_password)
-
-# Email
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=hitmoncrob@gmail.com
-EMAIL_HOST_PASSWORD=tazza95
-
-# Domini permessi
-ALLOWED_HOSTS=portale.example.com,localhost
-CORS_ALLOWED_ORIGINS=https://portale.example.com
-
-# Sicurezza
-SECURE_SSL_REDIRECT=True
-SESSION_COOKIE_SECURE=True
-CSRF_COOKIE_SECURE=True
-SECURE_HSTS_SECONDS=31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS=True
-SECURE_HSTS_PRELOAD=True
+if [ ! -f secrets/redis_password.txt ]; then
+       echo "Generazione password Redis..."
+       generate_password > secrets/redis_password.txt
+       chmod 600 secrets/redis_password.txt
+   fi
+    # Leggi le password generate per usarle nel .env.production
+   _DB_PASSWORD=$(cat secrets/db_password.txt)
+   _DJANGO_SECRET_KEY=$(cat secrets/django_secret_key.txt)
+   _REDIS_PASSWORD=$(cat secrets/redis_password.txt) # Leggi da qui
+    # Crea file .env.production con riferimenti ai secrets
+   cat > .env.production << EOF
+   # Produzione - usa Docker secrets
+   NODE_ENV=production
+   DEBUG=False
+    # Database - valori letti da secrets
+   DB_NAME=portale_db
+   DB_HOST=db
+   DB_PORT=5432
+    # Redis
+   REDIS_HOST=redis
+   REDIS_PORT=6379
+   REDIS_PASSWORD=${_REDIS_PASSWORD}
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USE_TLS=True
+   EMAIL_HOST_USER=hitmoncrob@gmail.com
+    # Domini permessi
+   ALLOWED_HOSTS=portale.example.com,localhost
+   CORS_ALLOWED_ORIGINS=https://portale.example.com
+    # Sicurezza
+   SECURE_SSL_REDIRECT=True
+   SESSION_COOKIE_SECURE=True
+   CSRF_COOKIE_SECURE=True
+   SECURE_HSTS_SECONDS=31536000
+   SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+   SECURE_HSTS_PRELOAD=True
 EOF
 
 chmod 600 .env.production
@@ -157,6 +159,7 @@ echo ""
 echo "📋 Password generate (salvale in un posto sicuro!):"
 echo "   DB Password: $(cat secrets/db_password.txt)"
 echo "   Redis Password: $(grep REDIS_PASSWORD .env.production | cut -d= -f2)"
+echo "   Email Password: $(cat secrets/email_host_password.txt)"
 echo ""
 echo "🔑 Django Secret Key salvata in: secrets/django_secret_key.txt"
 echo ""
