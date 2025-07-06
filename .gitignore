@@ -46,3 +46,8 @@ db.sqlite3-journal
 # File di backup
 *.bak
 *.swp
+
+#Cartelle backup e vecchie versioni
+backups/
+obsolete/
+archived/
