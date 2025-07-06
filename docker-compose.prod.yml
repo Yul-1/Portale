@@ -10,9 +10,12 @@ secrets:
     file: ./secrets/django_secret_key.txt
   redis_password:
     file: ./secrets/redis_password.txt
+  email_host_password:
+    file: ./secrets/email_host_password.txt
 
 services:
   backend:
+    env_file: .env.production
     command: >
       sh -c "
         python manage.py wait_for_db &&
@@ -38,6 +41,7 @@ services:
       - db_user
       - django_secret_key
       - redis_password
+      - email_host_password
 
   frontend:
     command: >

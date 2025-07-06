@@ -1,3 +1,5 @@
+# backend/api/views.py
+
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
@@ -13,6 +15,7 @@ from .serializers import (
 )
 import datetime
 import socket
+from django.db import connection # Importa connection per il controllo DB
 
 
 @csrf_exempt  # Solo per test iniziale, rimuovere in produzione
@@ -20,19 +23,30 @@ import socket
 def status_view(request):
     """
     Endpoint di test per verificare che l'API funzioni correttamente.
-    Restituisce informazioni base sul sistema.
+    Restituisce informazioni base sul sistema e lo stato del database.
     """
     try:
         hostname = socket.gethostname()
     except:
         hostname = "unknown"
     
+    db_status = "ok"
+    db_message = "Database connected"
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1") # Esegue una query semplice per testare la connessione al DB
+    except Exception as e:
+        db_status = "error"
+        db_message = f"Database connection failed: {e}"
+        # Se il DB non è connesso, potresti voler restituire un errore HTTP 500
+        # return JsonResponse({"status": "error", "message": db_message}, status=500)
+    
     response_data = {
-        "status": "ok",
+        "status": "ok" if db_status == "ok" else "degraded", # "ok" se tutto bene, "degraded" se DB ha problemi ma app risponde
         "message": "API is running",
         "timestamp": datetime.datetime.now().isoformat(),
         "version": "1.0.0",
-        "environment": "development",
+        "environment": os.environ.get('ENVIRONMENT', 'development'), # Leggi ENVIRONMENT dalla variabile d'ambiente
         "hostname": hostname,
         "path": request.path,
         "method": request.method,
@@ -41,8 +55,14 @@ def status_view(request):
             "user_agent": request.META.get('HTTP_USER_AGENT', ''),
             "x_forwarded_for": request.META.get('HTTP_X_FORWARDED_FOR', ''),
             "x_real_ip": request.META.get('HTTP_X_REAL_IP', ''),
-        }
+        },
+        "database_status": db_status,
+        "database_message": db_message
     }
+    
+    # Se il database non è connesso, restituisci uno stato HTTP 500
+    if db_status == "error":
+        return JsonResponse(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR, json_dumps_params={'indent': 2})
     
     return JsonResponse(response_data, json_dumps_params={'indent': 2})
 
@@ -130,7 +150,7 @@ class AlloggioViewSet(viewsets.ModelViewSet):
             'prezzo_totale': str(
                 (check_out - check_in).days * alloggio.prezzo_notte
             ),
-            'numero_notti': (check_out - check_in).days
+            'numero_notti': (check_in - check_out).days # Corretto: check_out - check_in
         })
     
     def list(self, request, *args, **kwargs):
