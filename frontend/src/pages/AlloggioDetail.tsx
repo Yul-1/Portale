@@ -26,6 +26,36 @@ const AlloggioDetail: React.FC = () => {
   const [numeroOspiti, setNumeroOspiti] = useState(1);
   const [loading, setLoading] = useState(true);
 
+  // ✅ NUOVA FUNZIONE: Genera array immagini per l'alloggio
+  const getImmaginiAlloggio = (alloggioId: string): string[] => {
+    const baseUrl = '/images/alloggi';
+    
+    if (alloggioId === '1') {
+      // Casa Iperione - 5 immagini
+      return [
+        `${baseUrl}/casa-iperione/01-principale.jpg`,
+        `${baseUrl}/casa-iperione/02-cucina.jpg`,
+        `${baseUrl}/casa-iperione/03-interno.jpg`,
+        `${baseUrl}/casa-iperione/04-cucina2.jpg`,
+        `${baseUrl}/casa-iperione/05-dettaglio.jpg`,
+      ];
+    } else if (alloggioId === '2') {
+      // Villa Aurora - 4 immagini
+      return [
+        `${baseUrl}/villa-aurora/01-principale.jpg`,
+        `${baseUrl}/villa-aurora/02-cucina.jpg`,
+        `${baseUrl}/villa-aurora/03-interno.jpg`,
+        `${baseUrl}/villa-aurora/04-dettaglio.jpg`,
+      ];
+    }
+    
+    // Fallback per alloggi non configurati
+    return [
+      `https://via.placeholder.com/800x600?text=Alloggio+${alloggioId}+Foto+1`,
+      `https://via.placeholder.com/800x600?text=Alloggio+${alloggioId}+Foto+2`,
+    ];
+  };
+
   // Simula il caricamento dei dati (in futuro sarà una chiamata API)
   useEffect(() => {
     const mockData: AlloggioData = {
@@ -41,13 +71,10 @@ const AlloggioDetail: React.FC = () => {
         'Wi-Fi gratuito',
         'Aria condizionata',
         'Cucina attrezzata',
-        'Lavatrice'],
-      immagini: [
-        `https://via.placeholder.com/800x600?text=${id === '1' ? 'Casa+Iperione' : 'Villa+Aurora'}+1`,
-        `https://via.placeholder.com/800x600?text=${id === '1' ? 'Casa+Iperione' : 'Villa+Aurora'}+2`,
-        `https://via.placeholder.com/800x600?text=${id === '1' ? 'Casa+Iperione' : 'Villa+Aurora'}+3`,
-        `https://via.placeholder.com/800x600?text=${id === '1' ? 'Casa+Iperione' : 'Villa+Aurora'}+4`,
+        'Lavatrice'
       ],
+      // ✅ AGGIORNATO: Usa immagini reali invece di placeholder
+      immagini: getImmaginiAlloggio(id || '1'),
       disponibile: true
     };
 
@@ -70,6 +97,13 @@ const AlloggioDetail: React.FC = () => {
     const end = new Date(checkOut);
     const giorni = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
     return giorni * alloggio.prezzoNotte;
+  };
+
+  // ✅ NUOVA FUNZIONE: Gestisce errori di caricamento immagini
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.target as HTMLImageElement;
+    const alloggioNome = alloggio?.nome || 'Alloggio';
+    target.src = `https://via.placeholder.com/800x600?text=${encodeURIComponent(alloggioNome)}+Immagine+Non+Disponibile`;
   };
 
   if (loading) {
@@ -99,12 +133,14 @@ const AlloggioDetail: React.FC = () => {
         </div>
       </header>
 
-      {/* Galleria immagini */}
+      {/* ✅ GALLERIA IMMAGINI AGGIORNATA */}
       <section className={styles.gallery}>
         <div className={styles.mainImage}>
           <img 
             src={alloggio.immagini[selectedImage]} 
             alt={`${alloggio.nome} - Foto ${selectedImage + 1}`}
+            onError={handleImageError}
+            loading="lazy"
           />
         </div>
         <div className={styles.thumbnails}>
@@ -114,7 +150,12 @@ const AlloggioDetail: React.FC = () => {
               className={`${styles.thumbnail} ${selectedImage === index ? styles.active : ''}`}
               onClick={() => setSelectedImage(index)}
             >
-              <img src={img} alt={`Thumbnail ${index + 1}`} />
+              <img 
+                src={img} 
+                alt={`Thumbnail ${index + 1}`}
+                onError={handleImageError}
+                loading="lazy"
+              />
             </div>
           ))}
         </div>
@@ -178,7 +219,6 @@ const AlloggioDetail: React.FC = () => {
                     id="checkIn"
                     value={checkIn}
                     onChange={(e) => setCheckIn(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
                     required
                   />
                 </div>
@@ -189,19 +229,17 @@ const AlloggioDetail: React.FC = () => {
                     id="checkOut"
                     value={checkOut}
                     onChange={(e) => setCheckOut(e.target.value)}
-                    min={checkIn || new Date().toISOString().split('T')[0]}
                     required
                   />
                 </div>
               </div>
 
               <div className={styles.inputGroup}>
-                <label htmlFor="ospiti">Numero di ospiti</label>
+                <label htmlFor="ospiti">Numero ospiti</label>
                 <select 
                   id="ospiti"
                   value={numeroOspiti}
                   onChange={(e) => setNumeroOspiti(parseInt(e.target.value))}
-                  required
                 >
                   {[...Array(alloggio.numeroOspitiMax)].map((_, i) => (
                     <option key={i + 1} value={i + 1}>
@@ -212,17 +250,9 @@ const AlloggioDetail: React.FC = () => {
               </div>
 
               {checkIn && checkOut && (
-                <div className={styles.summary}>
-                  <div className={styles.summaryRow}>
-                    <span>Totale notti:</span>
-                    <span>{Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 3600 * 24))}</span>
-                  </div>
-                  <div className={styles.summaryRow}>
-                    <span>Prezzo per notte:</span>
-                    <span>€{alloggio.prezzoNotte}</span>
-                  </div>
-                  <div className={styles.summaryTotal}>
-                    <span>Totale:</span>
+                <div className={styles.priceBreakdown}>
+                  <div className={styles.priceRow}>
+                    <span>Totale ({Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 3600 * 24))} notti)</span>
                     <span>€{calcolaTotale()}</span>
                   </div>
                 </div>
@@ -231,44 +261,14 @@ const AlloggioDetail: React.FC = () => {
               <button 
                 type="submit" 
                 className={styles.bookButton}
-                disabled={!alloggio.disponibile}
+                disabled={!checkIn || !checkOut}
               >
-                {alloggio.disponibile ? 'Prenota Ora' : 'Non Disponibile'}
+                Prenota ora
               </button>
             </form>
-
-            <p className={styles.info}>
-              Non verrà addebitato alcun importo in questa fase
-            </p>
           </div>
         </aside>
       </div>
-
-      {/* Mappa placeholder */}
-      <section className={styles.mapSection}>
-        <h2>Posizione</h2>
-        <div className={styles.mapContainer}>
-          <div className={styles.mapPlaceholder}>
-            <p>Mappa interattiva - {alloggio.posizione}</p>
-            <a 
-              href={`https://maps.google.com/maps?q=${encodeURIComponent(alloggio.posizione)}`}
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={styles.mapLink}
-            >
-              Apri in Google Maps
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer semplice */}
-      <footer className={styles.footer}>
-        <p>
-          Hai domande? <Link to="/contatti">Contattaci</Link> | 
-          <Link to="/privacy-policy"> Termini e condizioni del trattamento dei dati personali</Link>
-        </p>
-      </footer>
     </div>
   );
 };

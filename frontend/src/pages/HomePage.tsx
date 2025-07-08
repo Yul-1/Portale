@@ -14,12 +14,12 @@ const HomePage: React.FC = () => {
     {
       id: 1,
       nome: 'Casa Iperione',
-      immagine: 'https://via.placeholder.com/300x300?text=Casa+Iperione'
+      immagine: '/images/alloggi/casa-iperione.jpg'  // ✅ Immagine ottimizzata locale
     },
     {
       id: 2,
       nome: 'Villa Aurora',
-      immagine: 'https://via.placeholder.com/300x300?text=Villa+Aurora'
+      immagine: '/images/alloggi/villa-aurora.jpg'   // ✅ Immagine ottimizzata locale
     }
   ];
 
@@ -47,6 +47,11 @@ const HomePage: React.FC = () => {
                     src={alloggio.immagine} 
                     alt={alloggio.nome}
                     className={styles.alloggioImage}
+                    onError={(e) => {
+                      // ✅ Fallback in caso di errore
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://via.placeholder.com/300x300?text=${encodeURIComponent(alloggio.nome)}`;
+                    }}
                   />
                 </div>
                 <h3>{alloggio.nome}</h3>
@@ -55,6 +60,7 @@ const HomePage: React.FC = () => {
           ))}
         </div>
       </section>
+
 
       {/* Zona disponibilità */}
       <section className={styles.disponibilitaSection}>
