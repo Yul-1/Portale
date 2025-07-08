@@ -269,6 +269,30 @@ const AlloggioDetail: React.FC = () => {
           </div>
         </aside>
       </div>
+            <section className={styles.mapSection}>
+        <h2>Posizione</h2>
+        <div className={styles.mapContainer}>
+          <div className={styles.mapPlaceholder}>
+            <p>Mappa interattiva - {alloggio.posizione}</p>
+            <a 
+              href={`https://maps.google.com/maps?q=${encodeURIComponent(alloggio.posizione)}`}
+              target="_blank" 
+              rel="noopener noreferrer"
+              className={styles.mapLink}
+            >
+              Apri in Google Maps
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer semplice */}
+      <footer className={styles.footer}>
+        <p>
+          Hai domande? <Link to="/contatti">Contattaci</Link> | 
+          <Link to="/privacy-policy"> Termini e condizioni del trattamento dei dati personali</Link>
+        </p>
+      </footer>
     </div>
   );
 };
