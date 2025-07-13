@@ -46,7 +46,8 @@ COPY --chown=portale:portale . /app/
 RUN find /app -type f -name "*.pyc" -delete && \
     find /app -type d -name "__pycache__" -delete && \
     chmod +x /app/manage.py && \
-    chmod +x /app/entrypoint.sh
+    chmod +x /app/entrypoint.sh && \
+    chmod -R 777 /media
 
 # Cambia a utente non-root
 USER portale

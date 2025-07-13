@@ -1,5 +1,5 @@
 #!/bin/bash
-# backend/entrypoint.sh - VERSIONE SEMPLIFICATA PER SVILUPPO
+# backend/entrypoint.sh - VERSIONE AGGIORNATA PER COMANDI INIZIALI
 
 set -e
 
@@ -16,6 +16,21 @@ while ! nc -z ${DB_HOST:-db} ${DB_PORT:-5432}; do
 done
 log "PostgreSQL is up!"
 
-# Esegui il comando passato come argomento allo script (es. "python manage.py runserver...")
-log "Executing command: $@"
+# Esegui le migrazioni di Django
+log "Applying Django migrations..."
+python manage.py migrate --noinput
+
+# Crea il superuser se non esiste (solo in sviluppo)
+
+if [ "$CREATE_SUPERUSER" = "true" ]; then
+    log "Creating superuser if it does not exist..."
+    python manage.py create_superuser || true # '|| true' per non far fallire lo script se l'utente esiste già
+fi
+
+# Raccogli i file statici
+log "Collecting static files..."
+python manage.py collectstatic --noinput
+
+# Esegui il comando passato come argomento allo script (es. "gunicorn config.wsgi:application...")
+log "Starting Django application..."
 exec "$@"
