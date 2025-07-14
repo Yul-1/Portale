@@ -1,27 +1,104 @@
-import React from 'react';
+// frontend/src/pages/HomePage.tsx
+
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './HomePage.module.css';
+// Importa le interfacce corrette da api.ts
+import apiService, { AlloggioData as OriginalAlloggioData, ApiListResponse } from '../services/api';
 
-interface Alloggio {
-  id: number;
-  nome: string;
-  immagine: string;
-}
+// Estendi AlloggioData per includere la proprietà 'immagine' usata nel frontend
+type AlloggioData = OriginalAlloggioData & { immagine?: string };
+
+// Non è più necessaria un'interfaccia Alloggio locale se AlloggioData è completa
+// interface Alloggio {
+//   id: number;
+//   nome: string;
+//   immagine: string; // URL dell'immagine
+//   posizione?: string;
+//   prezzo_notte?: number;
+//   numero_ospiti_max?: number;
+//   disponibile?: boolean;
+// }
+
 
 const HomePage: React.FC = () => {
-  // Dati di esempio per gli alloggi
-  const alloggi: Alloggio[] = [
+  // Ora alloggi è tipizzato come AlloggioData[]
+  const [alloggi, setAlloggi] = useState<AlloggioData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Dati di fallback (assicurati che rispettino l'interfaccia AlloggioData completa)
+  const alloggiFallback: AlloggioData[] = [
     {
       id: 1,
       nome: 'Casa Iperione',
-      immagine: '/images/alloggi/casa-iperione.jpg'  // ✅ Immagine ottimizzata locale
+      descrizione: 'Splendida casa toscana con vista panoramica sulla valle.', // Campo obbligatorio
+      posizione: 'Lucca, Toscana - Colline lucchesi',
+      prezzo_notte: 150.00,
+      numero_ospiti_max: 6,
+      numero_camere: 3, // Campo obbligatorio
+      numero_bagni: 2, // Campo obbligatorio
+      servizi: ["Wi-Fi gratuito", "Piscina privata"], // Campo obbligatorio
+      disponibile: true,
+      immagine_principale: '/images/alloggi/casa-iperione.jpg'
     },
     {
       id: 2,
       nome: 'Villa Aurora',
-      immagine: '/images/alloggi/villa-aurora.jpg'   // ✅ Immagine ottimizzata locale
+      descrizione: 'Elegante villa con piscina privata immersa nel verde.', // Campo obbligatorio
+      posizione: 'Lucca, Toscana - Zona San Concordio',
+      prezzo_notte: 200.00,
+      numero_ospiti_max: 8,
+      numero_camere: 4, // Campo obbligatorio
+      numero_bagni: 3, // Campo obbligatorio
+      servizi: ["Wi-Fi gratuito", "Piscina privata"], // Campo obbligatorio
+      disponibile: true,
+      immagine_principale: '/images/alloggi/villa-aurora.jpg'
     }
   ];
+
+  useEffect(() => {
+    loadAlloggi();
+  }, []);
+
+  const loadAlloggi = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Ora 'response' è tipizzato correttamente come ApiListResponse<AlloggioData>
+      const response: ApiListResponse<AlloggioData> = await apiService.getAlloggi();
+      console.log('Risposta API per gli alloggi:', response);
+
+      // Accedi direttamente all'array degli alloggi annidato nel campo 'results' dell'oggetto 'results'
+      const alloggiDalBackend: AlloggioData[] = response.results.results;
+
+      // Mappa i dati per includere il campo 'immagine' per la visualizzazione nel frontend
+      // Usiamo immagine_principale come fonte primaria
+      const alloggiMappatiPerFrontend: AlloggioData[] = alloggiDalBackend.map(alloggio => ({
+        ...alloggio, // Copia tutte le proprietà esistenti dall'oggetto alloggio
+        immagine: alloggio.immagine_principale || // Priorità all'immagine principale
+                  (alloggio.foto && alloggio.foto.length > 0 ? alloggio.foto[0].image_url : null) || // Poi la prima foto se esiste
+                  `/images/alloggi/${alloggio.nome.toLowerCase().replace(/\s+/g, '-')}.jpg`, // Fallback locale
+      }));
+
+      // Se non ci sono alloggi dal backend, usa i dati di fallback
+      setAlloggi(alloggiMappatiPerFrontend.length > 0 ? alloggiMappatiPerFrontend : alloggiFallback);
+
+    } catch (err) {
+      console.error('Errore nel caricamento degli alloggi dal backend:', err);
+      // Cattura il messaggio d'errore specifico per mostrarlo all'utente
+      setError(`Impossibile caricare gli alloggi. ${err instanceof Error ? err.message : 'Si prega di riprovare più tardi.'}`);
+      setAlloggi(alloggiFallback); // In caso di errore, usa i dati di fallback
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.target as HTMLImageElement;
+    const alloggioNome = target.alt || 'Alloggio';
+    target.src = `https://via.placeholder.com/300x300?text=${encodeURIComponent(alloggioNome)}`;
+  };
 
   return (
     <div className={styles.homePage}>
@@ -34,24 +111,38 @@ const HomePage: React.FC = () => {
       {/* Sezione alloggi */}
       <section className={styles.alloggiSection}>
         <h2>I Nostri Alloggi</h2>
+        {loading && (
+          <div className={styles.loadingContainer}>
+            <div className={styles.spinner}></div>
+            <p>Caricamento alloggi...</p>
+          </div>
+        )}
+        {error && (
+          <div className={styles.errorMessage}>
+            <p>{error}</p>
+            <button onClick={loadAlloggi}>Riprova</button>
+          </div>
+        )}
+        {!loading && alloggi.length === 0 && !error && (
+          <div className={styles.noResults}>
+            <p>Nessun alloggio disponibile al momento. Utilizzo dati di esempio.</p>
+          </div>
+        )}
         <div className={styles.alloggiGrid}>
           {alloggi.map((alloggio) => (
-            <Link 
-              key={alloggio.id} 
+            <Link
+              key={alloggio.id}
               to={`/alloggi/dettaglio/${alloggio.id}`}
               className={styles.alloggioLink}
             >
               <div className={styles.alloggioCard}>
                 <div className={styles.imageContainer}>
-                  <img 
-                    src={alloggio.immagine} 
+                  {/* Usa alloggio.immagine, che è stata mappata e ora è sempre presente */}
+                  <img
+                    src={alloggio.immagine || ''}
                     alt={alloggio.nome}
                     className={styles.alloggioImage}
-                    onError={(e) => {
-                      // ✅ Fallback in caso di errore
-                      const target = e.target as HTMLImageElement;
-                      target.src = `https://via.placeholder.com/300x300?text=${encodeURIComponent(alloggio.nome)}`;
-                    }}
+                    onError={handleImageError}
                   />
                 </div>
                 <h3>{alloggio.nome}</h3>
@@ -60,7 +151,6 @@ const HomePage: React.FC = () => {
           ))}
         </div>
       </section>
-
 
       {/* Zona disponibilità */}
       <section className={styles.disponibilitaSection}>
@@ -114,9 +204,9 @@ const HomePage: React.FC = () => {
         <h2>Dove Siamo</h2>
         <div className={styles.mapPlaceholder}>
           <p>Mappa interattiva - Link a Google Maps</p>
-          <a 
-            href="https://maps.google.com" 
-            target="_blank" 
+          <a
+            href="http://googleusercontent.com/maps.google.com/6"
+            target="_blank"
             rel="noopener noreferrer"
             className={styles.mapLink}
           >
@@ -141,7 +231,7 @@ const HomePage: React.FC = () => {
           </div>
         </div>
         <div className={styles.footerBottom}>
-          <p>&copy; 2025 Portale Prenotazioni. Tutti i diritti riservati.</p>
+          <p>© 2025 Portale Prenotazioni. Tutti i diritti riservati.</p>
         </div>
       </footer>
     </div>

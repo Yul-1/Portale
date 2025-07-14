@@ -1,127 +1,142 @@
+// frontend/src/pages/AlloggioDetail.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import styles from './AlloggioDetail.module.css';
-
-interface AlloggioData {
-  id: number;
-  nome: string;
-  descrizione: string;
-  posizione: string;
-  prezzoNotte: number;
-  numeroOspitiMax: number;
-  numeroCamere: number;
-  numeroBagni: number;
-  servizi: string[];
-  immagini: string[];
-  disponibile: boolean;
-}
+// Importa apiService e le interfacce AlloggioData e FotoAlloggio da api.ts
+import apiService, { AlloggioData, FotoAlloggio } from '../services/api';
 
 const AlloggioDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>(); // Ottiene l'ID dall'URL
+  const navigate = useNavigate(); // Mantenuto se usato per reindirizzamenti
   const [alloggio, setAlloggio] = useState<AlloggioData | null>(null);
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [numeroOspiti, setNumeroOspiti] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // ✅ NUOVA FUNZIONE: Genera array immagini per l'alloggio
-  const getImmaginiAlloggio = (alloggioId: string): string[] => {
-    const baseUrl = '/images/alloggi';
-    
-    if (alloggioId === '1') {
-      // Casa Iperione - 5 immagini
-      return [
-        `${baseUrl}/casa-iperione/01-principale.jpg`,
-        `${baseUrl}/casa-iperione/02-cucina.jpg`,
-        `${baseUrl}/casa-iperione/03-interno.jpg`,
-        `${baseUrl}/casa-iperione/04-cucina2.jpg`,
-        `${baseUrl}/casa-iperione/05-dettaglio.jpg`,
-      ];
-    } else if (alloggioId === '2') {
-      // Villa Aurora - 4 immagini
-      return [
-        `${baseUrl}/villa-aurora/01-principale.jpg`,
-        `${baseUrl}/villa-aurora/02-cucina.jpg`,
-        `${baseUrl}/villa-aurora/03-interno.jpg`,
-        `${baseUrl}/villa-aurora/04-dettaglio.jpg`,
-      ];
-    }
-    
-    // Fallback per alloggi non configurati
-    return [
-      `https://via.placeholder.com/800x600?text=Alloggio+${alloggioId}+Foto+1`,
-      `https://via.placeholder.com/800x600?text=Alloggio+${alloggioId}+Foto+2`,
-    ];
+  // Dati di fallback per un alloggio singolo, in caso di errore di caricamento o ID non valido
+  // Assicurati che questi dati rispecchino la struttura completa di AlloggioData da api.ts
+  const alloggioFallback: AlloggioData = {
+    id: 0, // ID fittizio per fallback
+    nome: 'Alloggio Non Disponibile',
+    descrizione: 'Spiacenti, i dettagli per questo alloggio non sono disponibili al momento. Potrebbe essere un ID non valido o un problema di connessione al server. Si prega di provare più tardi.',
+    posizione: 'Controlla la tua connessione o l\'ID dell\'alloggio',
+    prezzo_notte: 0.00,
+    numero_ospiti_max: 0,
+    numero_camere: 0,
+    numero_bagni: 0,
+    servizi: [],
+    disponibile: false,
+    immagine_principale: 'https://via.placeholder.com/800x600?text=Immagine+Non+Disponibile', // Placeholder generico
+    foto: [], // Array vuoto per le foto di fallback
   };
 
-  // Simula il caricamento dei dati (in futuro sarà una chiamata API)
   useEffect(() => {
-    const mockData: AlloggioData = {
-      id: parseInt(id || '1'),
-      nome: id === '1' ? 'Casa Iperione' : 'Villa Aurora',
-      descrizione: 'Comoda casa spaziosa e luminosa. Perfetta per una vacanza rilassante, offre tutti i comfort moderni mantenendo il fascino rustico tipico della regione.',
-      posizione: 'Noto, città patrimonio UNESCO, a 15 minuti dal centro storico',
-      prezzoNotte: id === '1' ? 150 : 200,
-      numeroOspitiMax: 5,
-      numeroCamere: 2,
-      numeroBagni: 1,
-      servizi: [
-        'Wi-Fi gratuito',
-        'Aria condizionata',
-        'Cucina attrezzata',
-        'Lavatrice'
-      ],
-      // ✅ AGGIORNATO: Usa immagini reali invece di placeholder
-      immagini: getImmaginiAlloggio(id || '1'),
-      disponibile: true
+    const loadAlloggioData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        if (!id) {
+          setError('ID alloggio non fornito nell\'URL.');
+          setAlloggio(alloggioFallback);
+          return;
+        }
+
+        // Chiamata all'API per recuperare i dati dell'alloggio
+        const data = await apiService.getAlloggio(id);
+        console.log('Dati alloggio dal backend:', data); // Questo log dovrebbe ora apparire!
+
+        setAlloggio(data);
+
+        // Se l'alloggio ha delle foto, imposta l'indice dell'immagine corrente a 0
+        if (data.foto && data.foto.length > 0) {
+          setCurrentImageIndex(0);
+        } else if (data.immagine_principale) {
+          // Se non ci sono foto nell'array 'foto' ma c'è un'immagine principale, la usiamo
+          // per la galleria, anche se sarà una sola immagine.
+          setAlloggio(prev => prev ? { ...prev, foto: [{ id: 0, image_url: data.immagine_principale ?? 'https://via.placeholder.com/800x600?text=Immagine+Non+Disponibile', descrizione: 'Immagine principale', tipo: 'principale', ordine: 0 }] } : null);
+          setCurrentImageIndex(0);
+        } else {
+          // Nessuna immagine disponibile, usa il placeholder
+          setAlloggio(prev => prev ? { ...prev, foto: [{ id: 0, image_url: 'https://via.placeholder.com/800x600?text=Nessuna+Immagine', descrizione: 'Nessuna immagine disponibile', tipo: 'altro', ordine: 0 }] } : null);
+          setCurrentImageIndex(0);
+        }
+
+      } catch (err) {
+        console.error('Errore nel caricamento dell\'alloggio dal backend:', err);
+        // Cattura il messaggio d'errore specifico per mostrarlo all'utente
+        setError(`Impossibile caricare i dettagli dell\'alloggio. ${err instanceof Error ? err.message : 'Si prega di riprovare più tardi.'}`);
+        setAlloggio(alloggioFallback); // Usa i dati di fallback in caso di errore
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setTimeout(() => {
-      setAlloggio(mockData);
-      setLoading(false);
-    }, 500);
-  }, [id]);
+    loadAlloggioData(); // Invoca la funzione di caricamento dati
+  }, [id]); // Re-invoca se l'ID nell'URL cambia
 
-  const handlePrenotazione = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In futuro qui ci sarà la logica per salvare la prenotazione
-    alert(`Prenotazione per ${alloggio?.nome} dal ${checkIn} al ${checkOut} per ${numeroOspiti} ospiti`);
-    navigate('/prenotazioni');
+  // Funzioni per la navigazione nella galleria (se più di una foto)
+  const handlePrevImage = () => {
+    if (alloggio && alloggio.foto && alloggio.foto.length > 0) {
+      setCurrentImageIndex((prevIndex) =>
+        prevIndex === 0 ? alloggio.foto!.length - 1 : prevIndex - 1
+      );
+    }
   };
 
-  const calcolaTotale = () => {
-    if (!checkIn || !checkOut || !alloggio) return 0;
-    const start = new Date(checkIn);
-    const end = new Date(checkOut);
-    const giorni = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
-    return giorni * alloggio.prezzoNotte;
+  const handleNextImage = () => {
+    if (alloggio && alloggio.foto && alloggio.foto.length > 0) {
+      setCurrentImageIndex((prevIndex) =>
+        prevIndex === alloggio.foto!.length - 1 ? 0 : prevIndex + 1
+      );
+    }
   };
 
-  // ✅ NUOVA FUNZIONE: Gestisce errori di caricamento immagini
+  const handleThumbnailClick = (index: number) => {
+    setCurrentImageIndex(index);
+  };
+
+  // Funzione per gestire errori di caricamento delle singole immagini
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement;
-    const alloggioNome = alloggio?.nome || 'Alloggio';
-    target.src = `https://via.placeholder.com/800x600?text=${encodeURIComponent(alloggioNome)}+Immagine+Non+Disponibile`;
+    target.src = 'https://via.placeholder.com/800x600?text=Immagine+Non+Disponibile'; // Fallback per singola immagine
   };
+
 
   if (loading) {
     return (
       <div className={styles.loading}>
-        <p>Caricamento...</p>
+        <p>Caricamento dettagli alloggio...</p>
       </div>
     );
   }
 
-  if (!alloggio) {
+  // Gestione dell'errore (quando setError è stato chiamato)
+  if (error) {
     return (
-      <div className={styles.notFound}>
-        <h2>Alloggio non trovato</h2>
-        <Link to="/">Torna alla home</Link>
+      <div className={styles.notFound}> {/* Usa la classe .notFound esistente */}
+        <h2>Errore</h2>
+        <p>{error}</p>
+        <Link to="/" className={styles.backLink}>Torna alla Home</Link>
       </div>
     );
   }
+
+  // Gestione dell'alloggio non trovato (alloggio è null o non ha un ID valido dopo il caricamento)
+  if (!alloggio || !alloggio.id) {
+    return (
+      <div className={styles.notFound}>
+        <h2>Alloggio non trovato</h2>
+        <Link to="/" className={styles.backLink}>Torna alla Home</Link>
+      </div>
+    );
+  }
+
+  // Determina l'URL dell'immagine principale da visualizzare nella galleria
+  const mainImageSrc = (alloggio.foto && alloggio.foto.length > 0)
+    ? alloggio.foto[currentImageIndex].image_url // Se ci sono foto nell'array 'foto'
+    : alloggio.immagine_principale || 'https://via.placeholder.com/800x600?text=Nessuna+Immagine'; // Altrimenti immagine principale o fallback
+
 
   return (
     <div className={styles.detailPage}>
@@ -133,32 +148,40 @@ const AlloggioDetail: React.FC = () => {
         </div>
       </header>
 
-      {/* ✅ GALLERIA IMMAGINI AGGIORNATA */}
+      {/* Galleria Immagini */}
       <section className={styles.gallery}>
         <div className={styles.mainImage}>
-          <img 
-            src={alloggio.immagini[selectedImage]} 
-            alt={`${alloggio.nome} - Foto ${selectedImage + 1}`}
+          <img
+            src={mainImageSrc}
+            alt={alloggio.nome + ' - ' + (alloggio.foto && alloggio.foto.length > 0 ? alloggio.foto[currentImageIndex].descrizione : 'Immagine principale')}
             onError={handleImageError}
             loading="lazy"
           />
+          {alloggio.foto && alloggio.foto.length > 1 && (
+            <>
+              <button onClick={handlePrevImage} className={styles.navButton}>&#10094;</button>
+              <button onClick={handleNextImage} className={styles.navButton}>&#10095;</button>
+            </>
+          )}
         </div>
-        <div className={styles.thumbnails}>
-          {alloggio.immagini.map((img, index) => (
-            <div 
-              key={index}
-              className={`${styles.thumbnail} ${selectedImage === index ? styles.active : ''}`}
-              onClick={() => setSelectedImage(index)}
-            >
-              <img 
-                src={img} 
-                alt={`Thumbnail ${index + 1}`}
-                onError={handleImageError}
-                loading="lazy"
-              />
-            </div>
-          ))}
-        </div>
+        {alloggio.foto && alloggio.foto.length > 0 && (
+          <div className={styles.thumbnails}>
+            {alloggio.foto.map((foto, index) => (
+              <div
+                key={foto.id || index}
+                className={`${styles.thumbnail} ${index === currentImageIndex ? styles.active : ''}`}
+                onClick={() => handleThumbnailClick(index)}
+              >
+                <img
+                  src={foto.image_url}
+                  alt={foto.descrizione || `Thumbnail ${index + 1}`}
+                  onError={handleImageError}
+                  loading="lazy"
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Contenuto principale */}
@@ -168,7 +191,7 @@ const AlloggioDetail: React.FC = () => {
           <div className={styles.description}>
             <h2>Descrizione</h2>
             <p>{alloggio.descrizione}</p>
-            
+
             <div className={styles.details}>
               <div className={styles.detailItem}>
                 <span className={styles.icon}>📍</span>
@@ -176,15 +199,15 @@ const AlloggioDetail: React.FC = () => {
               </div>
               <div className={styles.detailItem}>
                 <span className={styles.icon}>👥</span>
-                <span>Fino a {alloggio.numeroOspitiMax} ospiti</span>
+                <span>Fino a {alloggio.numero_ospiti_max} ospiti</span>
               </div>
               <div className={styles.detailItem}>
                 <span className={styles.icon}>🛏️</span>
-                <span>{alloggio.numeroCamere} camere da letto</span>
+                <span>{alloggio.numero_camere} camere da letto</span>
               </div>
               <div className={styles.detailItem}>
                 <span className={styles.icon}>🚿</span>
-                <span>{alloggio.numeroBagni} bagni</span>
+                <span>{alloggio.numero_bagni} bagni</span>
               </div>
             </div>
           </div>
@@ -192,12 +215,16 @@ const AlloggioDetail: React.FC = () => {
           <div className={styles.servizi}>
             <h3>Servizi inclusi</h3>
             <div className={styles.serviziGrid}>
-              {alloggio.servizi.map((servizio, index) => (
-                <div key={index} className={styles.servizioItem}>
-                  <span className={styles.checkIcon}>✓</span>
-                  <span>{servizio}</span>
-                </div>
-              ))}
+              {alloggio.servizi && alloggio.servizi.length > 0 ? (
+                alloggio.servizi.map((servizio, index) => (
+                  <div key={index} className={styles.servizioItem}>
+                    <span className={styles.checkIcon}>✓</span>
+                    <span>{servizio}</span>
+                  </div>
+                ))
+              ) : (
+                <p>Nessun servizio specificato.</p>
+              )}
             </div>
           </div>
         </section>
@@ -206,29 +233,28 @@ const AlloggioDetail: React.FC = () => {
         <aside className={styles.bookingSection}>
           <div className={styles.bookingCard}>
             <div className={styles.priceHeader}>
-              <span className={styles.price}>€{alloggio.prezzoNotte}</span>
+              {/* Usa alloggio.prezzo_notte direttamente */}
+              <span className={styles.price}>€{alloggio.prezzo_notte.toFixed(2)}</span>
               <span className={styles.perNight}>/ notte</span>
             </div>
 
-            <form onSubmit={handlePrenotazione} className={styles.bookingForm}>
+            <form onSubmit={(e) => { e.preventDefault(); alert('Funzione di prenotazione non implementata.'); }} className={styles.bookingForm}>
               <div className={styles.dateInputs}>
                 <div className={styles.inputGroup}>
                   <label htmlFor="checkIn">Check-in</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     id="checkIn"
-                    value={checkIn}
-                    onChange={(e) => setCheckIn(e.target.value)}
+                    value="" // Sarà gestito da stato in fasi future
                     required
                   />
                 </div>
                 <div className={styles.inputGroup}>
                   <label htmlFor="checkOut">Check-out</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     id="checkOut"
-                    value={checkOut}
-                    onChange={(e) => setCheckOut(e.target.value)}
+                    value="" // Sarà gestito da stato in fasi future
                     required
                   />
                 </div>
@@ -236,12 +262,11 @@ const AlloggioDetail: React.FC = () => {
 
               <div className={styles.inputGroup}>
                 <label htmlFor="ospiti">Numero ospiti</label>
-                <select 
+                <select
                   id="ospiti"
-                  value={numeroOspiti}
-                  onChange={(e) => setNumeroOspiti(parseInt(e.target.value))}
+                  defaultValue="1" // Sarà gestito da stato in fasi future
                 >
-                  {[...Array(alloggio.numeroOspitiMax)].map((_, i) => (
+                  {[...Array(alloggio.numero_ospiti_max)].map((_, i) => (
                     <option key={i + 1} value={i + 1}>
                       {i + 1} {i === 0 ? 'ospite' : 'ospiti'}
                     </option>
@@ -249,34 +274,35 @@ const AlloggioDetail: React.FC = () => {
                 </select>
               </div>
 
-              {checkIn && checkOut && (
+              {/* Rimuovi calcolaTotale e priceBreakdown per ora, in quanto non abbiamo lo stato delle date */}
+              {/* checkIn && checkOut && (
                 <div className={styles.priceBreakdown}>
                   <div className={styles.priceRow}>
                     <span>Totale ({Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 3600 * 24))} notti)</span>
                     <span>€{calcolaTotale()}</span>
                   </div>
                 </div>
-              )}
+              )*/}
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className={styles.bookButton}
-                disabled={!checkIn || !checkOut}
+                // disabled={!checkIn || !checkOut} // disabilitato se non abbiamo stato date
               >
-                Prenota ora
+                Verifica Disponibilità e Prenota
               </button>
             </form>
           </div>
         </aside>
       </div>
-            <section className={styles.mapSection}>
+      <section className={styles.mapSection}>
         <h2>Posizione</h2>
         <div className={styles.mapContainer}>
           <div className={styles.mapPlaceholder}>
             <p>Mappa interattiva - {alloggio.posizione}</p>
-            <a 
-              href={`https://maps.google.com/maps?q=${encodeURIComponent(alloggio.posizione)}`}
-              target="_blank" 
+            <a
+              href={`http://maps.google.com/?q=${encodeURIComponent(alloggio.posizione)}`}
+              target="_blank"
               rel="noopener noreferrer"
               className={styles.mapLink}
             >
@@ -289,7 +315,7 @@ const AlloggioDetail: React.FC = () => {
       {/* Footer semplice */}
       <footer className={styles.footer}>
         <p>
-          Hai domande? <Link to="/contatti">Contattaci</Link> | 
+          Hai domande? <Link to="/contatti">Contattaci</Link> |
           <Link to="/privacy-policy"> Termini e condizioni del trattamento dei dati personali</Link>
         </p>
       </footer>

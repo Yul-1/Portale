@@ -18,7 +18,12 @@ services:
         echo 'Starting dev server...' &&
         python manage.py runserver 0.0.0.0:8000
       "
-    
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/staticfiles # Necessario se collectstatic è eseguito
+      - media_volume:/app/media # <--- AGGIUNTO: per persistenza media in sviluppo
+      - django_logs:/app/logs # Per i log persistenti in sviluppo 
+
   frontend:
     # Sovrascrive il CMD del Dockerfile per usare il server di sviluppo di React
     command: npm start
