@@ -1,6 +1,8 @@
-version: '3.8'
+# docker-compose.prod.yml - Aggiornato per la Produzione
 
-# Usa i secrets in produzione
+version: '3.8' # Mantenuto per chiarezza, anche se Docker Compose v2 lo ignora
+
+# Definizione dei secrets (già presenti, confermato)
 secrets:
   db_password:
     file: ./secrets/db_password.txt
@@ -11,11 +13,54 @@ secrets:
   redis_password:
     file: ./secrets/redis_password.txt
   email_host_password:
-    file: ./secrets/email_host_password.txt
+    file: ./secrets/email_host_password.txt # Assicurati che questo secret esista
 
 services:
+  db:
+    image: postgres:15-alpine
+    container_name: portale_db_prod # Nome specifico per prod
+    environment:
+      POSTGRES_DB: ${DB_NAME:-portale_db}
+      POSTGRES_USER: ${DB_USER:-portale_user} # User per l'inizializzazione, sarà sovrascritto dai secrets per l'app
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-portale_password} # Password per l'inizializzazione, sarà sovrascritto dai secrets per l'app
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data # Volume dedicato per prod
+      # Non includere ./database/init in prod, il DB deve essere inizializzato a parte prima del deployment
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    # user: "postgres" # Postgres di solito gira già come utente dedicato
+
+  redis:
+    image: redis:7-alpine
+    container_name: portale_redis_prod # Nome specifico per prod
+    # Legge la password dal secret, che Docker espone come env var
+    command: redis-server --requirepass ${REDIS_PASSWORD} # <--- MODIFICATO: Legge direttamente la env var
+    volumes:
+      - redis_data_prod:/data # Volume dedicato per prod
+    networks:
+      - backend-network
+    restart: unless-stopped
+    healthcheck: # Healthcheck per Redis
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"] # Usa la env var
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # user: "redis" # Redis di solito gira già come utente dedicato
+
   backend:
-    env_file: .env.production
+    build:
+      context: ./backend
+      dockerfile: Dockerfile # Usa il Dockerfile di base (presumendo che il tuo Dockerfile del backend sia rinominato in 'Dockerfile')
+    container_name: portale_backend_prod # Nome specifico per prod
+    # env_file non è più necessario se tutte le env var sono passate direttamente o tramite secrets
+    # env_file: .env.production # <--- RIMOSSO: Passiamo le variabili esplicitamente o tramite secrets
     command: >
       sh -c "
         python manage.py wait_for_db &&
@@ -33,17 +78,78 @@ services:
           --access-logfile /app/logs/gunicorn-access.log \
           --error-logfile /app/logs/gunicorn-error.log
       "
-    environment:
-      - DEBUG=False
-      - ENVIRONMENT=production
-    secrets:
+    environment: # Variabili d'ambiente esposte al container Django
+      DEBUG: False # Sempre False in produzione
+      ENVIRONMENT: production
+      # Variabili DB da secrets
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-portale_db}
+      DB_PORT: 5432
+      DB_USER: ${DB_USER} # Leggerà dalla variabile d'ambiente iniettata dal secret
+      DB_PASSWORD: ${DB_PASSWORD} # Leggerà dalla variabile d'ambiente iniettata dal secret
+      # Django Secrets
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY} # Leggerà dalla variabile d'ambiente iniettata dal secret
+      # Redis Secrets
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD} # Leggerà dalla variabile d'ambiente iniettata dal secret
+      # Email Secrets
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER} # Leggerà dalla variabile d'ambiente iniettata dal secret
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD} # Leggerà dalla variabile d'ambiente iniettata dal secret
+      # CORS
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS} # Leggerà dal .env.production esterno
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS} # Leggerà dal .env.production esterno
+      # Email Host (non è un secret)
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
+      # Altre impostazioni di sicurezza Django
+      SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE}
+      SESSION_COOKIE_HTTPONLY: ${SESSION_COOKIE_HTTPONLY}
+      SESSION_COOKIE_SAMESITE: ${SESSION_COOKIE_SAMESITE}
+      CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE}
+      CSRF_COOKIE_HTTPONLY: ${CSRF_COOKIE_HTTPONLY}
+      CSRF_COOKIE_SAMESITE: ${CSRF_COOKIE_SAMESITE}
+      SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS}
+      SECURE_HSTS_INCLUDE_SUBDOMAINS: ${SECURE_HSTS_INCLUDE_SUBDOMAINS}
+      SECURE_HSTS_PRELOAD: ${SECURE_HSTS_PRELOAD}
+      SECURE_CONTENT_TYPE_NOSNIFF: ${SECURE_CONTENT_TYPE_NOSNIFF}
+      SECURE_BROWSER_XSS_FILTER: ${SECURE_BROWSER_XSS_FILTER}
+      X_FRAME_OPTIONS: DENY # Impostato qui o in settings.py
+    volumes:
+      - static_volume_prod:/app/staticfiles # Volume separato per static files in prod
+      - media_volume_prod:/app/media # Volume separato per media files in prod
+      - django_logs_prod:/app/logs # Volume per i log persistenti
+    secrets: # I segreti sono già definiti e caricati per essere accessibili ai container
       - db_password
       - db_user
       - django_secret_key
       - redis_password
       - email_host_password
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - frontend-network
+      - backend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/status/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    user: "portale" # <--- MODIFICATO: usa l'utente creato nel Dockerfile (es. 'portale')
 
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile # Usa il Dockerfile di base (presumendo sia rinominato)
+    container_name: portale_frontend_prod # Nome specifico per prod
     command: >
       sh -c "
         npm run build &&
@@ -51,32 +157,72 @@ services:
         serve -s build -l 3000
       "
     environment:
-      - NODE_ENV=production
+      NODE_ENV: production
+      REACT_APP_API_URL: https://yourdomain.com/api # <--- Importante: cambia con il tuo dominio reale!
+    volumes:
+      - frontend_build_prod:/app/build # Volume per i file di build, se serve debug
+    networks:
+      - frontend-network
+    restart: unless-stopped
+    user: "react" # <--- MODIFICATO: usa l'utente creato nel Dockerfile (es. 'react')
 
   nginx:
+    image: nginx:alpine
+    container_name: portale_nginx_prod # Nome specifico per prod
     ports:
       - "80:80"
       - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro # Usa nginx.conf per produzione
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - static_volume_prod:/var/www/static # Volume statici condiviso con backend
+      - media_volume_prod:/var/www/media # Volume media condiviso con backend
+      - ./secrets/ssl:/etc/nginx/ssl:ro # Monta i certificati SSL reali da secrets
+      - nginx_logs_prod:/var/log/nginx # Volume per i log di Nginx
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - frontend-network
+    restart: unless-stopped
 
-  # Servizio backup automatico
   db_backup:
     image: postgres:15-alpine
-    container_name: ${COMPOSE_PROJECT_NAME}_db_backup
+    container_name: ${COMPOSE_PROJECT_NAME}_db_backup_prod
     depends_on:
       - db
     environment:
-      - PGPASSWORD=${DB_PASSWORD}
+      PGPASSWORD: ${DB_PASSWORD} # <--- MODIFICATO: Legge dalla variabile d'ambiente del secret
+      DB_USER: ${DB_USER} # <--- AGGIUNTO: Legge dalla variabile d'ambiente del secret
+      DB_NAME: ${DB_NAME:-portale_db} # <--- AGGIUNTO: Legge dalla variabile d'ambiente
+      DB_HOST: db # <--- AGGIUNTO: Nome host del DB
     volumes:
-      - ./backups:/backups
+      - backups_prod:/backups # Cartella backup separata per prod
     networks:
       - backend-network
     command: >
       sh -c "
         while true; do
           echo 'Creating backup...'
-          pg_dump -h db -U ${DB_USER:-portale_user} ${DB_NAME:-portale_db} | gzip > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql.gz
+          pg_dump -h ${DB_HOST} -U ${DB_USER} ${DB_NAME} | gzip > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql.gz
           find /backups -type f -mtime +7 -delete
           echo 'Backup complete, sleeping for 24 hours'
           sleep 86400
         done
       "
+    # user: "postgres" # Per eseguire il backup come utente dedicato
+
+networks:
+  frontend-network:
+    driver: bridge
+  backend-network:
+    driver: bridge
+
+volumes:
+  postgres_data_prod: # Volume per i dati del DB in produzione
+  static_volume_prod: # Volume per i file statici in produzione
+  media_volume_prod:  # Volume per i file media in produzione
+  frontend_build_prod: # Volume per il build del frontend, opzionale
+  django_logs_prod:   # Volume per i log Django
+  nginx_logs_prod:    # Volume per i log Nginx
+  backups_prod:       # Volume per i backup del DB

@@ -3,3 +3,4 @@
 
 # Server di produzione
 gunicorn==21.2.0
+python-decouple==3.8
