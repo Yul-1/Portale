@@ -1,333 +1,203 @@
-/* HomePage.module.css */
+/* Aggiungi questi stili al file HomePage.module.css esistente */
 
-.homePage {
-  min-height: 100vh;
-  background-color: #f5f5f5;
-}
-
-/* Banner superiore */
-.banner {
-  background-color: #ff7800;
-  color: white;
+/* Stati di Loading ed Errore */
+.loadingContainer {
+  text-align: center;
   padding: 60px 20px;
-  text-align: center;
-  border: 3px solid black;
-  margin-bottom: 40px;
 }
 
-.banner h1 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-  font-weight: bold;
-}
-
-.banner p {
-  font-size: 1.2rem;
-  opacity: 0.95;
-}
-
-/* Sezione alloggi */
-.alloggiSection {
-  background-color: #a600ff;
-  padding: 60px 20px;
-  text-align: center;
-  border: 3px solid black;
-  margin: 0 auto 40px;
-  max-width: 1200px;
-}
-
-.alloggiSection h2 {
-  color: white;
-  font-size: 2rem;
-  margin-bottom: 40px;
-}
-
-.alloggiGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 40px;
-  justify-items: center;
-}
-
-.alloggioLink {
-  text-decoration: none;
-  color: white;
-  transition: transform 0.3s ease;
-}
-
-.alloggioLink:hover {
-  transform: translateY(-5px);
-}
-
-.alloggioCard {
-  text-align: center;
-  cursor: pointer;
-}
-
-.imageContainer {
-  width: 200px;
-  height: 200px;
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
   border-radius: 50%;
-  overflow: hidden;
-  border: 4px solid white;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
   margin: 0 auto 20px;
-  background-color: white;
 }
 
-.alloggioImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.alloggioLink:hover .alloggioImage {
-  transform: scale(1.1);
-}
-
-.alloggioCard h3 {
-  font-size: 1.3rem;
-  margin-top: 15px;
-  color: white;
-}
-
-/* Zona disponibilità */
-.disponibilitaSection {
-  background-color: white;
-  padding: 60px 20px;
+.errorMessage {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
   text-align: center;
-  border: 3px solid black;
-  margin: 0 auto 40px;
-  max-width: 1200px;
 }
 
-.disponibilitaSection h2 {
-  font-size: 2rem;
-  margin-bottom: 30px;
-  color: #333;
-}
-
-.searchContainer {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.dateInputs {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: 30px;
-}
-
-.inputGroup {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
-
-.inputGroup label {
-  margin-bottom: 5px;
-  font-weight: 600;
-  color: #555;
-}
-
-.inputGroup input,
-.inputGroup select {
-  padding: 10px 15px;
-  border: 2px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-  min-width: 180px;
-}
-
-.inputGroup input:focus,
-.inputGroup select:focus {
-  outline: none;
-  border-color: #ff7800;
-}
-
-.searchButton {
-  background-color: #ff7800;
+.errorMessage button {
+  margin-top: 10px;
+  padding: 8px 20px;
+  background-color: #c33;
   color: white;
   border: none;
-  padding: 15px 40px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  border-radius: 5px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  font-size: 16px;
 }
 
-.searchButton:hover {
-  background-color: #e66a00;
+.errorMessage button:hover {
+  background-color: #a22;
 }
 
-/* Sezione Info */
-.infoSection {
-  padding: 60px 20px;
-  max-width: 1200px;
-  margin: 0 auto 40px;
-}
-
-.infoGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-}
-
-.prenotaCard,
-.galleriaCard {
-  background-color: white;
-  padding: 40px;
-  border: 3px solid black;
-  text-align: center;
-}
-
-.prenotaCard h2,
-.galleriaCard h2 {
-  font-size: 1.8rem;
-  margin-bottom: 20px;
-  color: #333;
-}
-
-.prenotaCard p,
-.galleriaCard p {
-  color: #666;
-  margin-bottom: 30px;
-  line-height: 1.6;
-}
-
-.ctaButton {
-  display: inline-block;
-  background-color: #a600ff;
+/* Badge disponibilità */
+.badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #4caf50;
   color: white;
-  padding: 12px 30px;
-  text-decoration: none;
-  border-radius: 5px;
-  font-weight: bold;
-  transition: background-color 0.3s ease;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.ctaButton:hover {
-  background-color: #8400cc;
+/* Card Content migliorato */
+.cardContent {
+  padding: 16px;
 }
 
-/* Sezione Mappa */
-.mapSection {
-  background-color: white;
-  padding: 60px 20px;
-  text-align: center;
-  border: 3px solid black;
-  margin: 0 auto 40px;
-  max-width: 1200px;
-}
-
-.mapSection h2 {
-  font-size: 2rem;
-  margin-bottom: 30px;
+.cardContent h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
   color: #333;
 }
 
-.mapPlaceholder {
-  background-color: #f5f5f5;
-  padding: 80px 20px;
-  border: 2px dashed #ccc;
-  border-radius: 10px;
-}
-
-.mapPlaceholder p {
-  font-size: 1.2rem;
+.location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: #666;
-  margin-bottom: 20px;
+  font-size: 14px;
+  margin-bottom: 12px;
 }
 
-.mapLink {
-  color: #ff7800;
-  font-weight: bold;
-  text-decoration: none;
+.locationIcon {
+  font-size: 16px;
 }
 
-.mapLink:hover {
-  text-decoration: underline;
-}
-
-/* Footer */
-.footer {
-  background-color: white;
-  border: 3px solid black;
-  padding: 40px 20px 20px;
-}
-
-.footerContent {
-  max-width: 1200px;
-  margin: 0 auto;
+/* Card Footer con prezzo e capacità */
+.cardFooter {
   display: flex;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 40px;
-  margin-bottom: 30px;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
 }
 
-.footerInfo h3 {
-  font-size: 1.5rem;
+.priceInfo {
+  display: flex;
+  align-items: baseline;
+}
+
+.price {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.perNight {
+  font-size: 14px;
+  color: #666;
+  margin-left: 4px;
+}
+
+.capacity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #666;
+}
+
+.capacityIcon {
+  font-size: 16px;
+}
+
+/* Nessun risultato */
+.noResults {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.noResults p {
+  font-size: 18px;
+}
+
+/* Sezione informativa */
+.infoSection {
+  padding: 60px 0;
+  background-color: #f8f9fa;
+  text-align: center;
+}
+
+.infoSection h2 {
+  font-size: 32px;
+  margin-bottom: 40px;
+  color: #2c3e50;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 40px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.feature {
+  text-align: center;
+}
+
+.featureIcon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 20px;
+}
+
+.feature h3 {
+  font-size: 20px;
   margin-bottom: 10px;
   color: #333;
 }
 
-.footerInfo p {
+.feature p {
   color: #666;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
-.footerLinks {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.footerLinks a {
-  color: #666;
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-.footerLinks a:hover {
-  color: #ff7800;
-}
-
-.privacyLink {
-  font-weight: 600;
-  color: #333 !important;
-}
-
-.footerBottom {
-  text-align: center;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
-  color: #999;
-}
-
-/* Responsive */
+/* Migliora il responsive */
 @media (max-width: 768px) {
-  .banner h1 {
-    font-size: 2rem;
-  }
-  
   .alloggiGrid {
     grid-template-columns: 1fr;
   }
   
-  .dateInputs {
-    flex-direction: column;
-    align-items: center;
+  .features {
+    grid-template-columns: 1fr;
+    gap: 30px;
   }
   
-  .footerContent {
-    flex-direction: column;
-    text-align: center;
+  .infoSection {
+    padding: 40px 0;
   }
-  
-  .footerLinks {
-    align-items: center;
-  }
+}
+
+.alloggioImage {
+  width: 10%;
+  height: 10%;
+  object-fit: cover;
+  border-radius: 50%; /* Questo rende l'immagine rotonda */
 }
