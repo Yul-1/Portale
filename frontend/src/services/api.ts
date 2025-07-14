@@ -21,41 +21,38 @@ export interface AlloggioData {
   nome: string;
   descrizione: string;
   posizione: string;
-  prezzo_notte: number; // <--- MODIFICATO: Sarà sempre number dopo la normalizzazione
+  prezzo_notte: number; // Sarà sempre number dopo la normalizzazione
   numero_ospiti_max: number;
-  numero_camere: number; // Aggiunto, è obbligatorio nel modello Django
-  numero_bagni: number; // Aggiunto, è obbligatorio nel modello Django
-  servizi: string[]; // Aggiunto, è obbligatorio nel modello Django
+  numero_camere: number;
+  numero_bagni: number;
+  servizi: string[];
   disponibile: boolean;
   immagine_principale?: string; // URL dell'immagine principale (metodo property dal modello)
   foto?: FotoAlloggio[]; // Relazione one-to-many con FotoAlloggio
-  // immagini?: string[]; // Rimosso: usiamo 'foto' o 'immagine_principale'
   numero_foto?: number; // Conteggio foto
   created_at?: string;
   updated_at?: string;
-  // Aggiunto per l'API di dettaglio, se Django la espone
-  extra_guests_cost?: number;
+  extra_guests_cost?: number; // Aggiunto per l'API di dettaglio, se Django la espone
 }
 
 // Interfaccia per la parte di paginazione interna (che è il valore del campo 'results' principale)
 export interface InnerPaginatedResults<T> {
-  count: number; // Conteggio degli elementi nella pagina corrente
+  count: number;
   num_pages: number;
   page_size: number;
   current_page: number;
   results: T[]; // L'array effettivo di elementi (es. AlloggioData[])
-  timestamp: string; // Timestamp di questa sezione paginata
+  timestamp: string;
 }
 
 // Interfaccia per la risposta completa dall'API /alloggi/ (la root dell'oggetto JSON)
 export interface ApiListResponse<T> {
-  count: number; // Conteggio totale di tutti gli elementi
+  count: number;
   next: string | null;
   previous: string | null;
   results: InnerPaginatedResults<T>; // Il campo 'results' contiene l'oggetto con la paginazione interna
-  timestamp: string; // Timestamp della risposta esterna
+  timestamp: string;
 }
-
 
 export interface PrenotazioneData {
   alloggio_id: number;
@@ -67,21 +64,22 @@ export interface PrenotazioneData {
   ospite_telefono?: string;
 }
 
-// Interfaccia per l'upload di foto
+// Interfaccia FotoUploadData - MANTENUTA A FINI DI REFERENZA MA NON USATA PER L'UPLOAD DIRETTO
+// Questa interfaccia è utile per sapere come il backend si aspetta i dati di upload.
 export interface FotoUploadData {
   alloggio: number;
   immagine?: File; // Per upload di file
-  url_download?: string; // Per download da URL esterno (campo `url` diventa readonly in FotoAlloggio)
+  url_download?: string; // Per download da URL esterno
   descrizione?: string;
   tipo?: 'principale' | 'camera' | 'bagno' | 'cucina' | 'esterno' | 'altro';
   ordine?: number;
 }
 
+
 // Gestione token di autenticazione
 let authToken: string | null = null;
 
 class ApiService {
-  // Metodo per impostare il token di autenticazione
   setAuthToken(token: string | null) {
     authToken = token;
     if (token) {
@@ -91,7 +89,6 @@ class ApiService {
     }
   }
 
-  // Recupera il token salvato
   getAuthToken(): string | null {
     if (!authToken) {
       authToken = localStorage.getItem('authToken');
@@ -99,7 +96,6 @@ class ApiService {
     return authToken;
   }
 
-  // Headers di base per le richieste
   private getHeaders(isFormData: boolean = false): HeadersInit {
     const headers: HeadersInit = {};
 
@@ -115,7 +111,6 @@ class ApiService {
     return headers;
   }
 
-  // Gestione errori centralizzata
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
@@ -127,7 +122,6 @@ class ApiService {
 
   // ==== METODI PER GLI ALLOGGI ====
 
-  // Recupera tutti gli alloggi con paginazione opzionale
   async getAlloggi(page: number = 1, pageSize: number = 10): Promise<ApiListResponse<AlloggioData>> {
     const url = new URL(`${API_BASE_URL}/alloggi/`);
     url.searchParams.append('page', page.toString());
@@ -139,7 +133,6 @@ class ApiService {
 
     const data = await this.handleResponse<ApiListResponse<AlloggioData>>(response);
 
-    // Normalizza i prezzi da string a number per tutti gli alloggi nell'array interno
     data.results.results = data.results.results.map(alloggio => ({
       ...alloggio,
       prezzo_notte: typeof alloggio.prezzo_notte === 'string'
@@ -150,7 +143,6 @@ class ApiService {
     return data;
   }
 
-  // Recupera un singolo alloggio con tutti i dettagli
   async getAlloggio(id: string | number): Promise<AlloggioData> {
     const response = await fetch(`${API_BASE_URL}/alloggi/${id}/`, {
       headers: this.getHeaders(),
@@ -158,7 +150,6 @@ class ApiService {
 
     const data = await this.handleResponse<AlloggioData>(response);
 
-    // Normalizza il prezzo anche per il singolo alloggio
     if (typeof data.prezzo_notte === 'string') {
       data.prezzo_notte = parseFloat(data.prezzo_notte);
     }
@@ -166,93 +157,85 @@ class ApiService {
     return data;
   }
 
-  // Crea un nuovo alloggio (richiede autenticazione)
+  // createAlloggio, updateAlloggio, deleteAlloggio rimangono per future funzionalità admin
   async createAlloggio(data: Partial<AlloggioData>): Promise<AlloggioData> {
     const response = await fetch(`${API_BASE_URL}/alloggi/`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-
     return this.handleResponse<AlloggioData>(response);
   }
 
-  // Aggiorna un alloggio esistente (richiede autenticazione)
   async updateAlloggio(id: string | number, data: Partial<AlloggioData>): Promise<AlloggioData> {
     const response = await fetch(`${API_BASE_URL}/alloggi/${id}/`, {
-      method: 'PATCH', // PATCH per aggiornamenti parziali
+      method: 'PATCH',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-
     return this.handleResponse<AlloggioData>(response);
   }
 
-  // Elimina un alloggio (richiede autenticazione)
   async deleteAlloggio(id: string | number): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/alloggi/${id}/`, {
       method: 'DELETE',
       headers: this.getHeaders(),
     });
-
     if (!response.ok) {
       throw new Error(`Errore nell'eliminazione: ${response.status}`);
     }
   }
 
-  // ==== METODI PER LE FOTO DEGLI ALLOGGI ====
+  // ==== METODI PER LE FOTO DEGLI ALLOGGI (UPLOAD DISABILITATO DA FRONTEND PER SICUREZZA) ====
 
-  // Upload foto da file locale (richiede autenticazione)
+  // Questi metodi sono stati commentati per impedire l'upload diretto di immagini
+  // dal frontend per motivi di sicurezza, come richiesto.
+  // L'upload deve avvenire tramite l'interfaccia amministrativa del backend.
+
+  /*
   async uploadFotoFromFile(data: FotoUploadData): Promise<FotoAlloggio> {
-    const formData = new FormData();
-    formData.append('alloggio', data.alloggio.toString());
-
-    if (data.immagine) {
-      formData.append('immagine', data.immagine);
-    }
-    if (data.descrizione) {
-      formData.append('descrizione', data.descrizione);
-    }
-    if (data.tipo) {
-      formData.append('tipo', data.tipo);
-    }
-    if (data.ordine !== undefined) {
-      formData.append('ordine', data.ordine.toString());
-    }
-
-    const response = await fetch(`${API_BASE_URL}/fotoalloggi/`, { // Endpoint per le foto
-      method: 'POST',
-      headers: this.getHeaders(true), // true per indicare FormData
-      body: formData,
-    });
-
-    return this.handleResponse<FotoAlloggio>(response);
+    console.warn("Upload di foto da file è disabilitato dal frontend per sicurezza.");
+    throw new Error("Upload di foto da file non consentito dal frontend.");
+    // Logica originale:
+    // const formData = new FormData();
+    // formData.append('alloggio', data.alloggio.toString());
+    // if (data.immagine) { formData.append('immagine', data.immagine); }
+    // if (data.descrizione) { formData.append('descrizione', data.descrizione); }
+    // if (data.tipo) { formData.append('tipo', data.tipo); }
+    // if (data.ordine !== undefined) { formData.append('ordine', data.ordine.toString()); }
+    // const response = await fetch(`${API_BASE_URL}/fotoalloggi/`, {
+    //   method: 'POST',
+    //   headers: this.getHeaders(true),
+    //   body: formData,
+    // });
+    // return this.handleResponse<FotoAlloggio>(response);
   }
 
-  // Upload foto da URL esterno (richiede autenticazione)
   async uploadFotoFromUrl(data: FotoUploadData): Promise<FotoAlloggio> {
-    const response = await fetch(`${API_BASE_URL}/fotoalloggi/`, { // Endpoint per le foto
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({
-        alloggio: data.alloggio,
-        url_download: data.url_download, // Questo campo viene gestito dal serializer nel backend
-        descrizione: data.descrizione,
-        tipo: data.tipo,
-        ordine: data.ordine,
-      }),
-    });
-
-    return this.handleResponse<FotoAlloggio>(response);
+    console.warn("Upload di foto da URL è disabilitato dal frontend per sicurezza.");
+    throw new Error("Upload di foto da URL non consentito dal frontend.");
+    // Logica originale:
+    // const response = await fetch(`${API_BASE_URL}/fotoalloggi/`, {
+    //   method: 'POST',
+    //   headers: this.getHeaders(),
+    //   body: JSON.stringify({
+    //     alloggio: data.alloggio,
+    //     url_download: data.url_download,
+    //     descrizione: data.descrizione,
+    //     tipo: data.tipo,
+    //     ordine: data.ordine,
+    //   }),
+    // });
+    // return this.handleResponse<FotoAlloggio>(response);
   }
+  */
 
-  // Elimina una foto (richiede autenticazione)
+  // deleteFoto rimane, in quanto eliminare foto esistenti è una funzionalità amministrativa
   async deleteFoto(id: number): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/fotoalloggi/${id}/`, {
       method: 'DELETE',
       headers: this.getHeaders(),
     });
-
     if (!response.ok) {
       throw new Error(`Errore nell'eliminazione della foto: ${response.status}`);
     }
@@ -260,18 +243,15 @@ class ApiService {
 
   // ==== METODI PER LE PRENOTAZIONI ====
 
-  // Crea una prenotazione (richiede autenticazione)
   async creaPrenotazione(data: PrenotazioneData): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/prenotazioni/`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-
     return this.handleResponse<any>(response);
   }
 
-  // Verifica disponibilità (non richiede autenticazione)
   async verificaDisponibilita(
     alloggioId: number,
     checkIn: string,
@@ -282,7 +262,7 @@ class ApiService {
     url.searchParams.append('check_out', checkOut);
 
     const response = await fetch(url.toString(), {
-      headers: this.getHeaders(), // Potrebbe non servire autenticazione per questo endpoint
+      headers: this.getHeaders(),
     });
 
     const data = await this.handleResponse<{ disponibile: boolean }>(response);
@@ -291,7 +271,6 @@ class ApiService {
 
   // ==== METODI DI AUTENTICAZIONE ====
 
-  // Login
   async login(username: string, password: string): Promise<{ token: string }> {
     const response = await fetch(`${API_BASE_URL}/auth/login/`, {
       method: 'POST',
@@ -300,13 +279,11 @@ class ApiService {
       },
       body: JSON.stringify({ username, password }),
     });
-
     const data = await this.handleResponse<{ token: string }>(response);
     this.setAuthToken(data.token);
     return data;
   }
 
-  // Logout
   async logout(): Promise<void> {
     try {
       await fetch(`${API_BASE_URL}/auth/logout/`, {
@@ -315,25 +292,18 @@ class ApiService {
       });
     } catch (error) {
       console.warn('Errore durante il logout (potrebbe essere un token già invalido):', error);
-      // Ignora errori di logout per pulire comunque il token lato client
     }
-
     this.setAuthToken(null);
   }
 
   // ==== METODI UTILITY ====
 
-  // Verifica lo stato dell'API
   async checkApiStatus(): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/status/`);
     return this.handleResponse<any>(response);
   }
 }
 
-// Esporta un'istanza singleton
 const apiService = new ApiService();
-
-// Recupera il token salvato all'avvio
 apiService.getAuthToken();
-
 export default apiService;
