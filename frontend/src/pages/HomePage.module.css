@@ -1,96 +1,112 @@
-/* Aggiungi questi stili al file HomePage.module.css esistente */
+/* HomePage.module.css */
 
-/* Stati di Loading ed Errore */
-.loadingContainer {
-  text-align: center;
+/* ... (stili esistenti per .homePage, .banner, ecc. come nella tua versione) ... */
+
+/* Sezione alloggi */
+.alloggiSection {
+  background-color: #a600ff;
   padding: 60px 20px;
-}
-
-.spinner {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.errorMessage {
-  background-color: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
-  padding: 20px;
-  border-radius: 8px;
-  margin: 20px 0;
   text-align: center;
+  border: 3px solid black;
+  margin: 0 auto 40px;
+  max-width: 1200px;
+  position: relative; /* Aggiunto per posizionamento del loading/error */
 }
 
-.errorMessage button {
-  margin-top: 10px;
-  padding: 8px 20px;
-  background-color: #c33;
+.alloggiSection h2 {
   color: white;
-  border: none;
-  border-radius: 4px;
+  font-size: 2rem;
+  margin-bottom: 40px;
+}
+
+.alloggiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 40px;
+  justify-items: center;
+}
+
+.alloggioLink {
+  text-decoration: none;
+  color: white;
+  transition: transform 0.3s ease;
+  width: 100%; /* Assicura che il link occupi tutta la larghezza della card */
+  max-width: 350px; /* Limite massimo per la larghezza della card */
+}
+
+.alloggioLink:hover {
+  transform: translateY(-5px);
+}
+
+.alloggioCard {
+  background-color: white;
+  border: 3px solid black;
+  border-radius: 8px;
+  overflow: hidden; /* Importante per arrotondare gli angoli dell'immagine */
+  text-align: left; /* Allineato a sinistra per il contenuto della card */
   cursor: pointer;
-  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex; /* Utilizza flexbox per layout interno */
+  flex-direction: column;
+  height: 100%; /* Assicura che le card abbiano la stessa altezza se necessario */
+  position: relative; /* Per posizionamento del badge */
 }
 
-.errorMessage button:hover {
-  background-color: #a22;
+.imageContainer {
+  width: 100%;
+  height: 220px; /* Altezza fissa per le immagini */
+  overflow: hidden;
+  /* Rimosso border-radius: 50% e margin: 0 auto 20px; da qui */
+  /* L'immagine non è più circolare per coerenza con lo screenshot */
+  background-color: #f0f0f0; /* Colore di sfondo per fallback visivo */
 }
 
-/* Badge disponibilità */
-.badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: #4caf50;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.alloggioImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Assicura che l'immagine copra l'area */
+  transition: transform 0.3s ease;
 }
 
-/* Card Content migliorato */
+.alloggioLink:hover .alloggioImage {
+  transform: scale(1.05); /* Effetto hover leggermente ridotto per una transizione più fluida */
+}
+
+/* Contenuto della card (sotto l'immagine) */
 .cardContent {
-  padding: 16px;
+  padding: 20px;
+  color: #333; /* Colore testo scuro per contrasto su sfondo bianco */
+  flex-grow: 1; /* Permette al contenuto di espandersi */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Spazia gli elementi verticalmente */
 }
 
-.cardContent h3 {
-  margin: 0 0 8px 0;
-  font-size: 20px;
-  color: #333;
+.alloggioCard h3 {
+  font-size: 1.5rem; /* Aumentato leggermente per visibilità */
+  margin-top: 0;
+  margin-bottom: 10px; /* Spazio sotto il titolo */
+  color: #2c3e50; /* Colore più scuro per il titolo */
 }
 
 .location {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  font-size: 0.95rem;
   color: #666;
-  font-size: 14px;
-  margin-bottom: 12px;
+  margin-bottom: 15px; /* Spazio sotto la posizione */
 }
 
 .locationIcon {
-  font-size: 16px;
+  font-size: 1.1rem;
 }
 
-/* Card Footer con prezzo e capacità */
 .cardFooter {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 15px; /* Spazio sopra il footer della card */
   padding-top: 12px;
   border-top: 1px solid #eee;
 }
@@ -101,13 +117,13 @@
 }
 
 .price {
-  font-size: 24px;
+  font-size: 1.6rem; /* Aumentato la dimensione del prezzo */
   font-weight: 700;
-  color: #2c3e50;
+  color: #ff7800; /* Colore arancione per il prezzo */
 }
 
 .perNight {
-  font-size: 14px;
+  font-size: 0.9rem;
   color: #666;
   margin-left: 4px;
 }
@@ -116,88 +132,200 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 0.9rem;
   color: #666;
 }
 
 .capacityIcon {
-  font-size: 16px;
+  font-size: 1rem;
 }
 
-/* Nessun risultato */
-.noResults {
-  text-align: center;
-  padding: 60px 20px;
-  color: #666;
-}
 
-.noResults p {
-  font-size: 18px;
-}
+/* ... (stili esistenti per .disponibilitaSection, .searchContainer, ecc.) ... */
 
-/* Sezione informativa */
+
+/* Sezione Info (rinominata per chiarezza e generalizzata) */
 .infoSection {
-  padding: 60px 0;
-  background-color: #f8f9fa;
+  background-color: #f8f9fa; /* Sfondo leggermente diverso */
+  padding: 60px 20px;
   text-align: center;
+  border: 3px solid black;
+  margin: 0 auto 40px;
+  max-width: 1200px;
 }
 
 .infoSection h2 {
-  font-size: 32px;
+  font-size: 2rem;
   margin-bottom: 40px;
-  color: #2c3e50;
-}
-
-.features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 40px;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.feature {
-  text-align: center;
-}
-
-.featureIcon {
-  font-size: 48px;
-  display: block;
-  margin-bottom: 20px;
-}
-
-.feature h3 {
-  font-size: 20px;
-  margin-bottom: 10px;
   color: #333;
 }
 
-.feature p {
-  color: #666;
-  font-size: 16px;
-  line-height: 1.5;
+.features { /* Nuovo contenitore per le feature */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  justify-content: center;
 }
 
-/* Migliora il responsive */
+.feature {
+  background-color: white;
+  padding: 30px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
+}
+
+.feature:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.feature .icon {
+  font-size: 3.5rem; /* Icone più grandi */
+  margin-bottom: 20px;
+  display: block; /* Per centrare l'icona */
+  color: #a600ff; /* Colore viola come nel tuo design */
+}
+
+.feature h3 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+.feature p {
+  color: #555;
+  line-height: 1.6;
+}
+
+/* Badge di disponibilità (nuovo stile) */
+.badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: #4CAF50; /* Verde per "Disponibile" */
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  z-index: 10; /* Assicura che sia sopra l'immagine */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Stati di Loading ed Errore */
+.loadingContainer, .errorMessage {
+  background-color: rgba(255, 255, 255, 0.9); /* Sfondo semi-trasparente */
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  position: absolute; /* Posiziona sopra il contenuto della sezione */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100; /* Assicura che sia visibile */
+  min-width: 300px;
+  max-width: 80%;
+  width: auto;
+}
+
+.loadingContainer p, .errorMessage p {
+    color: #333;
+    font-size: 1.1rem;
+    margin-top: 15px;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #a600ff; /* Colore spinner */
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.errorMessage {
+  background-color: #ffe0e0; /* Rosso chiaro per errore */
+  border: 1px solid #ff7070;
+  color: #cc0000;
+  padding: 20px;
+}
+
+.errorMessage button {
+  background-color: #ff7800; /* Bottone arancione */
+  color: white;
+  padding: 10px 25px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 20px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.errorMessage button:hover {
+  background-color: #e66a00;
+}
+
+.noResults {
+  text-align: center;
+  padding: 30px 20px;
+  color: #666;
+  font-size: 1.1rem;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  margin-top: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* ... (stili esistenti per .mapSection, .footer, ecc.) ... */
+
+/* Responsive */
 @media (max-width: 768px) {
+  .alloggiSection {
+    padding: 30px 15px;
+  }
   .alloggiGrid {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
-  
-  .features {
-    grid-template-columns: 1fr;
-    gap: 30px;
+
+  .alloggioLink {
+    max-width: 100%; /* Su schermi piccoli, occupa tutta la larghezza */
+  }
+
+  .imageContainer {
+    height: 180px; /* Altezza minore su mobile */
+  }
+
+  .alloggioCard h3 {
+    font-size: 1.2rem;
+  }
+
+  .price {
+    font-size: 1.4rem;
   }
   
   .infoSection {
-    padding: 40px 0;
+    padding: 30px 15px;
   }
-}
 
-.alloggioImage {
-  width: 10%;
-  height: 10%;
-  object-fit: cover;
-  border-radius: 50%; /* Questo rende l'immagine rotonda */
+  .infoSection h2 {
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+  }
+
+  .features {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
 }
