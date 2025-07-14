@@ -9,8 +9,8 @@ export interface FotoAlloggio {
   descrizione: string;
   tipo: 'principale' | 'camera' | 'bagno' | 'cucina' | 'esterno' | 'altro';
   ordine: number;
-  larghezza_originale?: number; // Nuovo campo dal backend
-  altezza_originale?: number; // Nuovo campo dal backend
+  larghezza_originale?: number;
+  altezza_originale?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -21,18 +21,20 @@ export interface AlloggioData {
   nome: string;
   descrizione: string;
   posizione: string;
-  prezzo_notte: number; // Il backend ritorna string, ma lo convertiamo a number
+  prezzo_notte: number; // <--- MODIFICATO: Sarà sempre number dopo la normalizzazione
   numero_ospiti_max: number;
-  numero_camere: number;
-  numero_bagni: number;
-  servizi: string[];
+  numero_camere: number; // Aggiunto, è obbligatorio nel modello Django
+  numero_bagni: number; // Aggiunto, è obbligatorio nel modello Django
+  servizi: string[]; // Aggiunto, è obbligatorio nel modello Django
   disponibile: boolean;
   immagine_principale?: string; // URL dell'immagine principale (metodo property dal modello)
   foto?: FotoAlloggio[]; // Relazione one-to-many con FotoAlloggio
-  // Rimuovi immagini?: string[]; // Array di URL per retrocompatibilità, ora gestito con `foto` e `immagine_principale`
+  // immagini?: string[]; // Rimosso: usiamo 'foto' o 'immagine_principale'
   numero_foto?: number; // Conteggio foto
   created_at?: string;
   updated_at?: string;
+  // Aggiunto per l'API di dettaglio, se Django la espone
+  extra_guests_cost?: number;
 }
 
 // Interfaccia per la parte di paginazione interna (che è il valore del campo 'results' principale)
@@ -75,7 +77,6 @@ export interface FotoUploadData {
   ordine?: number;
 }
 
-
 // Gestione token di autenticazione
 let authToken: string | null = null;
 
@@ -108,7 +109,6 @@ class ApiService {
     }
 
     if (!isFormData) {
-      // Content-Type deve essere omesso per FormData, il browser lo imposta automaticamente con il boundary
       headers['Content-Type'] = 'application/json';
     }
 
@@ -137,7 +137,6 @@ class ApiService {
       headers: this.getHeaders(),
     });
 
-    // La risposta è ApiListResponse<AlloggioData>
     const data = await this.handleResponse<ApiListResponse<AlloggioData>>(response);
 
     // Normalizza i prezzi da string a number per tutti gli alloggi nell'array interno
