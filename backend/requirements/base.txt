@@ -33,3 +33,4 @@ WeasyPrint==60.2
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
+requests==2.31.0
