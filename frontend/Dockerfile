@@ -1,45 +1,42 @@
-FROM node:18-alpine
+# frontend/Dockerfile - Modifica la riga COPY
 
-# Argomenti di build
-ARG NODE_ENV=development
+# Stage 1: Build the React application
+FROM node:18-alpine AS builder
 
-# Installa dipendenze di sistema necessarie
-RUN apk add --no-cache python3 make g++ tini curl
+ARG NODE_ENV=production
+ENV NODE_ENV=$NODE_ENV
 
-# Crea directory di lavoro
+ARG REACT_APP_API_URL
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+
 WORKDIR /app
 
-# Copia package files
 COPY package*.json ./
 
-# Installa dipendenze
-RUN npm cache clean --force && \
-    npm install --legacy-peer-deps && \
-    npm cache clean --force
+RUN npm ci --only=production --legacy-peer-deps
 
-# Crea utente non-root
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S react -u 1001 -G nodejs
+COPY . .
 
-# Copia il codice
-COPY --chown=react:nodejs . .
+RUN npm run build
 
-# Imposta permessi
-RUN mkdir -p /app/node_modules/.cache && \
-    chown -R react:nodejs /app
+# Stage 2: Serve the production build with Nginx
+FROM nginx:alpine
 
-# In produzione usa utente non-root
-USER react
+RUN addgroup -g 1001 -S nginxuser && \
+    adduser -S nginxuser -u 1001 -G nginxuser && \
+    mkdir -p /var/cache/nginx /var/run /var/log/nginx && \
+    chown -R nginxuser:nginxuser /var/cache/nginx /var/run /var/log/nginx && \
+    chown -R nginxuser:nginxuser /etc/nginx/conf.d
 
-# Espone la porta
-EXPOSE 3000
+RUN rm /etc/nginx/conf.d/default.conf
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3000/ || exit 1
+# IMPORTANTE: Il file è ora nella stessa directory del Dockerfile
+COPY nginx-frontend.conf /etc/nginx/conf.d/ 
 
-# Usa tini per gestione processi
-ENTRYPOINT ["tini", "--"]
+COPY --from=builder /app/build /usr/share/nginx/html
 
-# Comando di default
-CMD ["npm", "start"]
+USER nginxuser
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
