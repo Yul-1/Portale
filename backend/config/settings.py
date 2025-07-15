@@ -1,21 +1,35 @@
-# backend/config/settings.py - Adeguato per la Produzione
+# backend/config/settings.py - CORREZIONI CRITICHE PER EMAIL_HOST_PASSWORD E VARIABILI AMBIENTE
 
 import os
 from pathlib import Path
-# Importa config da python-decouple per leggere variabili d'ambiente in modo sicuro
 from decouple import config, Csv
-import dj_database_url # per configurare il DB da URL
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# DEBUG e SECRET_KEY da variabili d'ambiente (o Docker secrets)
-# In produzione, queste variabili dovrebbero essere iniettate nell'ambiente del container
-# o lette da file di secrets
-SECRET_KEY = config('DJANGO_SECRET_KEY') # Legge la chiave da env var, che Docker Secrets espone da file
-DEBUG = config('DEBUG', default=False, cast=bool) # Legge DEBUG da env var, default False
+ENVIRONMENT = config('ENVIRONMENT', default='development')
 
-# ALLOWED_HOSTS e CORS_ALLOWED_ORIGINS da variabili d'ambiente
-# In produzione, questi dovrebbero essere i tuoi domini reali
+# Funzione per leggere i secrets o le variabili d'ambiente (SENZA 'default' nella chiamata interna a config)
+def get_env_var_or_secret(key): # Rimosso 'default_value=None' dalla firma
+    try:
+        if ENVIRONMENT == 'production':
+            secret_path = f'/run/secrets/{key.lower()}' # Docker secrets sono in lowercase
+            if os.path.exists(secret_path):
+                with open(secret_path, 'r') as secret_file:
+                    return secret_file.read().strip()
+        # Se non è in produzione o il secret non esiste, prova come variabile d'ambiente standard
+        # Qui NON passiamo default, sarà gestito dalla chiamata esterna alla funzione get_env_var_or_secret
+        return config(key)
+    except Exception as e:
+        # Questo blocco viene raggiunto solo se config(key) fallisce senza un default
+        print(f"Warning: Could not load {key} from Docker secret or environment variable: {e}")
+        # Rilancia l'eccezione o gestisci diversamente se necessario.
+        # Per ora, rilanciamo per forzare la definizione, o usiamo un default nella chiamata esterna.
+        raise # Rilancia l'errore per UndefinedValueError se non c'è default esterno
+
+SECRET_KEY = get_env_var_or_secret('DJANGO_SECRET_KEY')
+DEBUG = config('DEBUG', default=False, cast=bool)
+
 ALLOWED_HOSTS_str = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_str.split(',')]
 
@@ -47,14 +61,16 @@ ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Configurazione del database usando dj-database-url e Docker Secrets
-# Le credenziali vengono lette dai file dei secrets montati in /run/secrets/
-DB_USER = config('DB_USER')
-DB_PASSWORD = config('DB_PASSWORD')
+DB_USER = get_env_var_or_secret('DB_USER')
+DB_PASSWORD = get_env_var_or_secret('DB_PASSWORD')
+DB_HOST = config('DB_HOST', default='db')
+DB_PORT = config('DB_PORT', default='5432')
+DB_NAME = config('DB_NAME', default='portale_db')
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"postgres://{DB_USER}:{DB_PASSWORD}@{config('DB_HOST')}:{config('DB_PORT')}/{config('DB_NAME')}",
-        conn_max_age=600 # Riutilizza connessioni al DB per performance
+        default=f"postgres://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
+        conn_max_age=600
     )
 }
 
@@ -66,7 +82,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = '/app/staticfiles'
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media' # Percorso /app/media nel container
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -76,50 +92,45 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
-        # In produzione, considera di usare TokenAuthentication o JWT
-        # 'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-        # In produzione, rimuovi BrowsableAPIRenderer per sicurezza
-        # 'rest_framework.renderers.BrowsableAPIRenderer',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
 
-# Impostazioni di sicurezza per HTTPS in produzione (basate su .env.production)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True # Permette a Django di vedere l'host reale dietro il proxy Nginx
+USE_X_FORWARDED_HOST = True
 
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
-SESSION_COOKIE_HTTPONLY = config('SESSION_COOKIE_HTTPONLY', default=True, cast=bool) # AGGIUNTO
-SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='Lax', cast=str) # AGGIUNTO (Strict o Lax)
+SESSION_COOKIE_HTTPONLY = config('SESSION_COOKIE_HTTPONLY', default=True, cast=bool)
+SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='Lax', cast=str)
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
-CSRF_COOKIE_HTTPONLY = config('CSRF_COOKIE_HTTPONLY', default=True, cast=bool) # AGGIUNTO
-CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='Lax', cast=str) # AGGIUNTO (Strict o Lax)
+CSRF_COOKIE_HTTPONLY = config('CSRF_COOKIE_HTTPONLY', default=True, cast=bool)
+CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='Lax', cast=str)
 SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=31536000, cast=int)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True, cast=bool)
 SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=True, cast=bool)
-SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True, cast=bool) # AGGIUNTO
-SECURE_BROWSER_XSS_FILTER = config('SECURE_BROWSER_XSS_FILTER', default=True, cast=bool) # AGGIUNTO
-X_FRAME_OPTIONS = 'DENY' # AGGIUNTO per sicurezza (sovrascritto da Nginx in caso di SAMEORIGIN)
+SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True, cast=bool)
+SECURE_BROWSER_XSS_FILTER = config('SECURE_BROWSER_XSS_FILTER', default=True, cast=bool)
+X_FRAME_OPTIONS = 'DENY'
 
-# CORS settings for production
 CORS_ALLOWED_ORIGINS_str = config('CORS_ALLOWED_ORIGINS', default='')
 CORS_ALLOWED_ORIGINS = [host.strip() for host in CORS_ALLOWED_ORIGINS_str.split(',')]
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Email settings
+# Email settings - AGGIUNTO default values per evitare UndefinedValueError
+# ORA GESTIAMO I DEFAULT FUORI dalla funzione get_env_var_or_secret
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = config('EMAIL_HOST')
-EMAIL_PORT = config('EMAIL_PORT', cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') # Legge la password da env var, che Docker Secrets espone da file
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@yourdomain.com') # AGGIUNTO
+EMAIL_HOST = config('EMAIL_HOST', default='localhost') # <--- AGGIUNTO DEFAULT (importante per avvio)
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='user@example.com') # <--- AGGIUNTO DEFAULT
+EMAIL_HOST_PASSWORD = get_env_var_or_secret('EMAIL_HOST_PASSWORD') # <--- Chiamata senza 'default' qui
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@yourdomain.com')
 
 TEMPLATES = [
     {
@@ -137,7 +148,6 @@ TEMPLATES = [
     },
 ]
 
-# Impostazioni per il Logging in produzione
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -158,8 +168,8 @@ LOGGING = {
         },
         'file': {
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': '/app/logs/django.log', # Salva su volume
-            'maxBytes': 1024 * 1024 * 5,  # 5 MB
+            'filename': '/app/logs/django.log',
+            'maxBytes': 1024 * 1024 * 5,
             'backupCount': 5,
             'formatter': 'verbose',
         },
@@ -181,12 +191,12 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console', 'file'],
-            'level': 'INFO', # O WARNING/ERROR in produzione per ridurre il verbosità
+            'level': 'INFO',
             'propagate': False,
         },
-        'api': { # Log per la tua app 'api'
+        'api': {
             'handlers': ['console', 'file'],
-            'level': 'INFO', # O WARNING/ERROR
+            'level': 'INFO',
             'propagate': False,
         },
         'gunicorn.access': {
@@ -200,7 +210,7 @@ LOGGING = {
             'propagate': False,
         },
     },
-    'root': { # Impostazioni predefinite per altri loggers non specificati
+    'root': {
         'handlers': ['console', 'file'],
         'level': 'WARNING',
     }

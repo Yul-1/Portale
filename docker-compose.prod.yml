@@ -1,8 +1,7 @@
-# docker-compose.prod.yml - Aggiornato per caricamento variabili d'ambiente (più robusto)
+# docker-compose.prod.yml - Aggiornato con Healthcheck per Nginx
 
 version: '3.8' # Puoi rimuovere questa riga per pulire i warning "version is obsolete"
 
-# Usa i secrets in produzione
 secrets:
   db_password:
     file: ./secrets/db_password.txt
@@ -19,12 +18,11 @@ services:
   db:
     image: postgres:15-alpine
     container_name: portale_db_prod
-    # Usiamo env_file per variabili non sensibili o di default
-    env_file: ./.env.production 
+    env_file: ./.env.production
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER} # Verrà sovrascritto dal secret per l'app
-      POSTGRES_PASSWORD: ${DB_PASSWORD} # Verrà sovrascritto dal secret per l'app
+      POSTGRES_DB: ${DB_NAME:-portale_db}
+      POSTGRES_USER: ${DB_USER:-portale_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-portale_password}
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
     networks:
@@ -40,7 +38,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: portale_redis_prod
-    env_file: ./.env.production 
+    env_file: ./.env.production
     command: redis-server --requirepass "$(cat /run/secrets/redis_password)"
     volumes:
       - redis_data_prod:/data
@@ -60,8 +58,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: portale_backend_prod
-    # Usiamo env_file per variabili non sensibili o di default
-    env_file: ./.env.production 
+    env_file: ./.env.production
     command: >
       sh -c "
         python manage.py wait_for_db &&
@@ -79,45 +76,14 @@ services:
           --access-logfile /app/logs/gunicorn-access.log \
           --error-logfile /app/logs/gunicorn-error.log
       "
-    environment: # Variabili per settings.py. Vengono lette dalle env vars del container.
-      # Le variabili seguenti sono lette da .env.production tramite env_file
-      # ENVIRONMENT: production # Già in .env.production
-      # DEBUG: ${DEBUG}
-      # DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
-      # CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      # EMAIL_BACKEND: ${EMAIL_BACKEND}
-      # EMAIL_HOST: ${EMAIL_HOST}
-      # EMAIL_PORT: ${EMAIL_PORT}
-      # EMAIL_USE_TLS: ${EMAIL_USE_TLS}
-      # EMAIL_HOST_USER: ${EMAIL_HOST_USER}
-      # DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
-      # SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT}
-      # SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE}
-      # SESSION_COOKIE_HTTPONLY: ${SESSION_COOKIE_HTTPONLY}
-      # SESSION_COOKIE_SAMESITE: ${SESSION_COOKIE_SAMESITE}
-      # CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE}
-      # CSRF_COOKIE_HTTPONLY: ${CSRF_COOKIE_HTTPONLY}
-      # CSRF_COOKIE_SAMESITE: ${CSRF_COOKIE_SAMESITE}
-      # SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS}
-      # SECURE_HSTS_INCLUDE_SUBDOMAINS: ${SECURE_HSTS_INCLUDE_SUBDOMAINS}
-      # SECURE_HSTS_PRELOAD: ${SECURE_HSTS_PRELOAD}
-      # SECURE_CONTENT_TYPE_NOSNIFF: ${SECURE_CONTENT_TYPE_NOSNIFF}
-      # SECURE_BROWSER_XSS_FILTER: ${SECURE_BROWSER_XSS_FILTER}
-
-      # Le seguenti sono variabili che Django si aspetta e che Docker Compose
-      # inietterà con il valore del secret. Non vengono dal .env.production
-      # direttamente per settings.py, ma dai secrets.
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY} 
+    environment:
+      ENVIRONMENT: production
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
-      
-      # Variabili fisse o che non vengono da env_file/secrets
-      DB_HOST: db # Fisso
-      DB_NAME: ${DB_NAME:-portale_db} # Può venire da .env.production, ma ha un default
-      DB_PORT: 5432 # Fisso
-
+      # Tutte le altre variabili dal .env.production caricate tramite env_file
     volumes:
       - static_volume_prod:/app/staticfiles
       - media_volume_prod:/app/media
@@ -149,13 +115,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args: # ARG per il Dockerfile, che sarà letto dal .env.production
+      args:
         REACT_APP_API_URL: ${REACT_APP_API_URL}
     container_name: portale_frontend_prod
-    env_file: ./.env.production # <--- AGGIUNTO: Carica variabili per il frontend
+    env_file: ./.env.production
     environment:
       NODE_ENV: production
-      # REACT_APP_API_URL è baked in, non serve qui a runtime
     volumes:
       - frontend_build_prod:/usr/share/nginx/html
     networks:
@@ -166,7 +131,7 @@ services:
   nginx:
     image: nginx:alpine
     container_name: portale_nginx_prod
-    env_file: ./.env.production # <--- AGGIUNTO: Carica variabili per nginx
+    env_file: ./.env.production
     ports:
       - "80:80"
       - "443:443"
@@ -177,17 +142,26 @@ services:
       - static_volume_prod:/var/www/static
       - media_volume_prod:/var/www/media
       - nginx_logs_prod:/var/log/nginx
+    # AGGIUNTO: Nginx aspetta che backend e frontend siano healthy
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
     networks:
       - frontend-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   db_backup:
     image: postgres:15-alpine
     container_name: ${COMPOSE_PROJECT_NAME}_db_backup_prod
-    env_file: ./.env.production # <--- AGGIUNTO: Carica variabili anche per db_backup
+    env_file: ./.env.production
     depends_on:
       - db
     environment:

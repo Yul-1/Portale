@@ -1,4 +1,4 @@
-# frontend/Dockerfile - Modifica la riga COPY
+# frontend/Dockerfile - Modifica SOLO la riga CMD finale
 
 # Stage 1: Build the React application
 FROM node:18-alpine AS builder
@@ -30,8 +30,7 @@ RUN addgroup -g 1001 -S nginxuser && \
 
 RUN rm /etc/nginx/conf.d/default.conf
 
-# IMPORTANTE: Il file è ora nella stessa directory del Dockerfile
-COPY nginx-frontend.conf /etc/nginx/conf.d/ 
+COPY nginx-frontend.conf /etc/nginx/conf.d/
 
 COPY --from=builder /app/build /usr/share/nginx/html
 
@@ -39,4 +38,5 @@ USER nginxuser
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+# MODIFICATO: Passa la direttiva PID come parte del comando.
+CMD ["nginx", "-g", "daemon off; pid /tmp/nginx.pid;"] # <--- AGGIUNTO/MODIFICATO: PID su /tmp
