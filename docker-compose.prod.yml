@@ -1,0 +1,82 @@
+version: '3.8'
+
+# Usa i secrets in produzione
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  db_user:
+    file: ./secrets/db_user.txt
+  django_secret_key:
+    file: ./secrets/django_secret_key.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  email_host_password:
+    file: ./secrets/email_host_password.txt
+
+services:
+  backend:
+    env_file: .env.production
+    command: >
+      sh -c "
+        python manage.py wait_for_db &&
+        python manage.py migrate --noinput &&
+        python manage.py collectstatic --noinput &&
+        gunicorn config.wsgi:application \
+          --bind 0.0.0.0:8000 \
+          --workers 3 \
+          --threads 2 \
+          --worker-class gthread \
+          --worker-tmp-dir /dev/shm \
+          --max-requests 1000 \
+          --max-requests-jitter 50 \
+          --timeout 120 \
+          --access-logfile /app/logs/gunicorn-access.log \
+          --error-logfile /app/logs/gunicorn-error.log
+      "
+    environment:
+      - DEBUG=False
+      - ENVIRONMENT=production
+    secrets:
+      - db_password
+      - db_user
+      - django_secret_key
+      - redis_password
+      - email_host_password
+
+  frontend:
+    command: >
+      sh -c "
+        npm run build &&
+        npm install -g serve &&
+        serve -s build -l 3000
+      "
+    environment:
+      - NODE_ENV=production
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+
+  # Servizio backup automatico
+  db_backup:
+    image: postgres:15-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}_db_backup
+    depends_on:
+      - db
+    environment:
+      - PGPASSWORD=${DB_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    networks:
+      - backend-network
+    command: >
+      sh -c "
+        while true; do
+          echo 'Creating backup...'
+          pg_dump -h db -U ${DB_USER:-portale_user} ${DB_NAME:-portale_db} | gzip > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql.gz
+          find /backups -type f -mtime +7 -delete
+          echo 'Backup complete, sleeping for 24 hours'
+          sleep 86400
+        done
+      "

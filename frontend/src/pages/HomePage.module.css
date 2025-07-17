@@ -1,9 +1,6 @@
 /* HomePage.module.css */
 
-.homePage {
-  min-height: 100vh;
-  background-color: #f5f5f5;
-}
+/* ... (stili esistenti per .homePage, .banner, ecc. come nella tua versione) ... */
 
 /* Banner superiore */
 .banner {
@@ -15,17 +12,6 @@
   margin-bottom: 40px;
 }
 
-.banner h1 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-  font-weight: bold;
-}
-
-.banner p {
-  font-size: 1.2rem;
-  opacity: 0.95;
-}
-
 /* Sezione alloggi */
 .alloggiSection {
   background-color: #a600ff;
@@ -34,6 +20,7 @@
   border: 3px solid black;
   margin: 0 auto 40px;
   max-width: 1200px;
+  position: relative; /* Mantenuto per posizionamento del loading/error */
 }
 
 .alloggiSection h2 {
@@ -51,7 +38,7 @@
 
 .alloggioLink {
   text-decoration: none;
-  color: white;
+  color: white; /* Testo del link bianco */
   transition: transform 0.3s ease;
 }
 
@@ -60,17 +47,18 @@
 }
 
 .alloggioCard {
-  text-align: center;
+  text-align: center; /* Testo centrato come nello screenshot */
   cursor: pointer;
+  /* Rimosse: border-radius, box-shadow, display: flex, flex-direction, height, position: relative */
 }
 
 .imageContainer {
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
+  width: 200px; /* Larghezza fissa per l'immagine circolare */
+  height: 200px; /* Altezza fissa per l'immagine circolare */
+  border-radius: 50%; /* Immagine circolare */
   overflow: hidden;
   border: 4px solid white;
-  margin: 0 auto 20px;
+  margin: 0 auto 20px; /* Centra l'immagine e aggiunge margine sotto */
   background-color: white;
 }
 
@@ -82,16 +70,18 @@
 }
 
 .alloggioLink:hover .alloggioImage {
-  transform: scale(1.1);
+  transform: scale(1.1); /* Effetto zoom più pronunciato */
 }
 
 .alloggioCard h3 {
   font-size: 1.3rem;
   margin-top: 15px;
-  color: white;
+  color: white; /* Colore bianco per il nome dell'alloggio */
 }
 
-/* Zona disponibilità */
+/* Rimosse le classi cardContent, location, cardFooter, priceInfo, price, perNight, capacity, capacityIcon */
+
+/* Zona disponibilità (nessuna modifica, è già come nello screenshot) */
 .disponibilitaSection {
   background-color: white;
   padding: 60px 20px;
@@ -163,14 +153,14 @@
   background-color: #e66a00;
 }
 
-/* Sezione Info */
+/* Sezione Info (prenotaCard e galleriaCard) */
 .infoSection {
   padding: 60px 20px;
   max-width: 1200px;
   margin: 0 auto 40px;
 }
 
-.infoGrid {
+.infoGrid { /* Mantenuta la classe infoGrid come nello screenshot */
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 30px;
@@ -213,7 +203,83 @@
   background-color: #8400cc;
 }
 
-/* Sezione Mappa */
+/* Badge di disponibilità (NUOVO - per i messaggi di stato) */
+/* Questo stile non è per le card degli alloggi, ma per loading/error/no results */
+.loadingContainer, .errorMessage {
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  min-width: 300px;
+  max-width: 80%;
+  width: auto;
+}
+
+.loadingContainer p, .errorMessage p {
+    color: #333;
+    font-size: 1.1rem;
+    margin-top: 15px;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #a600ff;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.errorMessage {
+  background-color: #ffe0e0;
+  border: 1px solid #ff7070;
+  color: #cc0000;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px auto; /* Centra il messaggio di errore se non è posizionato assolutamente */
+}
+
+.errorMessage button {
+  background-color: #ff7800;
+  color: white;
+  padding: 10px 25px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 20px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.errorMessage button:hover {
+  background-color: #e66a00;
+}
+
+.noResults {
+  text-align: center;
+  padding: 30px 20px;
+  color: #666;
+  font-size: 1.1rem;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  margin-top: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+
+/* Sezione Mappa (nessuna modifica, è già come nello screenshot) */
 .mapSection {
   background-color: white;
   padding: 60px 20px;
@@ -252,7 +318,7 @@
   text-decoration: underline;
 }
 
-/* Footer */
+/* Footer (nessuna modifica, è già come nello screenshot) */
 .footer {
   background-color: white;
   border: 3px solid black;
@@ -312,21 +378,21 @@
   .banner h1 {
     font-size: 2rem;
   }
-  
+
   .alloggiGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .dateInputs {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .footerContent {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .footerLinks {
     align-items: center;
   }

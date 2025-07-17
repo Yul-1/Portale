@@ -1,11 +1,13 @@
-# Core Django
+# Core Django & API
 Django==4.2.8
 djangorestframework==3.14.0
 django-cors-headers==4.3.1
+dj-database-url==2.1.0
+drf-spectacular==0.27.0
+django-filter==23.5
 
 # Database
 psycopg2-binary==2.9.9
-dj-database-url==2.1.0
 
 # Sicurezza
 django-environ==0.11.2
@@ -16,30 +18,19 @@ PyJWT==2.8.0
 Pillow==10.1.0
 django-storages==1.14.2
 
-# Task scheduling per gestione prenotazioni
+# Task & Scheduling
 celery==5.3.4
 redis==5.0.1
 django-celery-beat==2.5.0
 
-# API utilities
-django-filter==23.5
-drf-spectacular==0.27.0
-
 # Pagamenti
 stripe==7.9.0
 
-# PDF generation per contratti
+# PDF generation
 reportlab==4.0.8
 WeasyPrint==60.2
-
-# Testing
-pytest==7.4.3
-pytest-django==4.7.0
-factory-boy==3.3.0
-
-# Server
-gunicorn==21.2.0
 
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
+requests==2.31.0
