@@ -184,7 +184,7 @@ const AlloggioDetail: React.FC = () => {
     
     if (checkIn && checkOut && disponibile) {
       // Naviga alla pagina BookingPage
-      navigate(`/prenotazioni/nuovo/${alloggio.id}`, {
+      navigate(`/prenotazioni/${alloggio.id}`, {
         state: {
           alloggio,
           checkIn,

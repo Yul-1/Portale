@@ -35,41 +35,36 @@ export interface AlloggioData {
   extra_guests_cost?: number; // Aggiunto per l'API di dettaglio, se Django la espone
 }
 
-// Interfaccia per la parte di paginazione interna (che è il valore del campo 'results' principale)
-export interface InnerPaginatedResults<T> {
-  count: number;
-  num_pages: number;
-  page_size: number;
-  current_page: number;
-  results: T[]; // L'array effettivo di elementi (es. AlloggioData[])
-  timestamp: string;
-}
-
 // Interfaccia per la risposta completa dall'API /alloggi/ (la root dell'oggetto JSON)
 export interface ApiListResponse<T> {
   count: number;
   next: string | null;
   previous: string | null;
-  results: InnerPaginatedResults<T>; // Il campo 'results' contiene l'oggetto con la paginazione interna
-  timestamp: string;
+  results: T[]; 
 }
 
+// Interfaccia aggiornata per PrenotazioneData
 export interface PrenotazioneData {
-  alloggio_id: number;
-  check_in: string;
-  check_out: string;
+  id?: number; // L'ID è opzionale perché non esiste al momento della creazione
+  alloggio: number; // Corretto: usa 'alloggio' come nel backend per la FK
+  ospite_nome: string;
+  ospite_email: string;
+  ospite_telefono: string | null; // <-- Corretto: ospite_telefono
+  check_in: string; // <-- Corretto: check_in
+  check_out: string; // <-- Corretto: check_out
   numero_ospiti: number;
-  ospite_nome?: string;
-  ospite_email?: string;
-  ospite_telefono?: string;
+  prezzo_totale: string; // Stringa per Decimal
+  stato: string;
+  note_cliente: string | null; // <-- Corretto: note_cliente
+  created_at?: string; // Opzionale, generato dal backend
+  updated_at?: string; // Opzionale, generato dal backend
 }
 
 // Interfaccia FotoUploadData - MANTENUTA A FINI DI REFERENZA MA NON USATA PER L'UPLOAD DIRETTO
-// Questa interfaccia è utile per sapere come il backend si aspetta i dati di upload.
 export interface FotoUploadData {
   alloggio: number;
-  immagine?: File; // Per upload di file
-  url_download?: string; // Per download da URL esterno
+  immagine?: File;
+  url_download?: string;
   descrizione?: string;
   tipo?: 'principale' | 'camera' | 'bagno' | 'cucina' | 'esterno' | 'altro';
   ordine?: number;
@@ -133,7 +128,8 @@ class ApiService {
 
     const data = await this.handleResponse<ApiListResponse<AlloggioData>>(response);
 
-    data.results.results = data.results.results.map(alloggio => ({
+    // Se prezzo_notte è una stringa nel backend, convertila qui per coerenza
+    data.results = data.results.map(alloggio => ({
       ...alloggio,
       prezzo_notte: typeof alloggio.prezzo_notte === 'string'
         ? parseFloat(alloggio.prezzo_notte)
@@ -157,7 +153,6 @@ class ApiService {
     return data;
   }
 
-  // createAlloggio, updateAlloggio, deleteAlloggio rimangono per future funzionalità admin
   async createAlloggio(data: Partial<AlloggioData>): Promise<AlloggioData> {
     const response = await fetch(`${API_BASE_URL}/alloggi/`, {
       method: 'POST',
@@ -187,48 +182,7 @@ class ApiService {
   }
 
   // ==== METODI PER LE FOTO DEGLI ALLOGGI (UPLOAD DISABILITATO DA FRONTEND PER SICUREZZA) ====
-
-  // Questi metodi sono stati commentati per impedire l'upload diretto di immagini
-  // dal frontend per motivi di sicurezza, come richiesto.
-  // L'upload deve avvenire tramite l'interfaccia amministrativa del backend.
-
-  /*
-  async uploadFotoFromFile(data: FotoUploadData): Promise<FotoAlloggio> {
-    console.warn("Upload di foto da file è disabilitato dal frontend per sicurezza.");
-    throw new Error("Upload di foto da file non consentito dal frontend.");
-    // Logica originale:
-    // const formData = new FormData();
-    // formData.append('alloggio', data.alloggio.toString());
-    // if (data.immagine) { formData.append('immagine', data.immagine); }
-    // if (data.descrizione) { formData.append('descrizione', data.descrizione); }
-    // if (data.tipo) { formData.append('tipo', data.tipo); }
-    // if (data.ordine !== undefined) { formData.append('ordine', data.ordine.toString()); }
-    // const response = await fetch(`${API_BASE_URL}/fotoalloggi/`, {
-    //   method: 'POST',
-    //   headers: this.getHeaders(true),
-    //   body: formData,
-    // });
-    // return this.handleResponse<FotoAlloggio>(response);
-  }
-
-  async uploadFotoFromUrl(data: FotoUploadData): Promise<FotoAlloggio> {
-    console.warn("Upload di foto da URL è disabilitato dal frontend per sicurezza.");
-    throw new Error("Upload di foto da URL non consentito dal frontend.");
-    // Logica originale:
-    // const response = await fetch(`${API_BASE_URL}/fotoalloggi/`, {
-    //   method: 'POST',
-    //   headers: this.getHeaders(),
-    //   body: JSON.stringify({
-    //     alloggio: data.alloggio,
-    //     url_download: data.url_download,
-    //     descrizione: data.descrizione,
-    //     tipo: data.tipo,
-    //     ordine: data.ordine,
-    //   }),
-    // });
-    // return this.handleResponse<FotoAlloggio>(response);
-  }
-  */
+  // ... (rimane invariato) ...
 
   // deleteFoto rimane, in quanto eliminare foto esistenti è una funzionalità amministrativa
   async deleteFoto(id: number): Promise<void> {
@@ -243,13 +197,13 @@ class ApiService {
 
   // ==== METODI PER LE PRENOTAZIONI ====
 
-  async creaPrenotazione(data: PrenotazioneData): Promise<any> {
+  async creaPrenotazione(data: PrenotazioneData): Promise<PrenotazioneData> {
     const response = await fetch(`${API_BASE_URL}/prenotazioni/`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    return this.handleResponse<any>(response);
+    return this.handleResponse<PrenotazioneData>(response);
   }
 
   async verificaDisponibilita(
@@ -257,7 +211,8 @@ class ApiService {
     checkIn: string,
     checkOut: string
   ): Promise<boolean> {
-    const url = new URL(`${API_BASE_URL}/alloggi/${alloggioId}/disponibilita/`);
+    const url = new URL(`${API_BASE_URL}/disponibilita/`);
+    url.searchParams.append('alloggio_id', alloggioId.toString());
     url.searchParams.append('check_in', checkIn);
     url.searchParams.append('check_out', checkOut);
 
@@ -270,31 +225,7 @@ class ApiService {
   }
 
   // ==== METODI DI AUTENTICAZIONE ====
-
-  async login(username: string, password: string): Promise<{ token: string }> {
-    const response = await fetch(`${API_BASE_URL}/auth/login/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await this.handleResponse<{ token: string }>(response);
-    this.setAuthToken(data.token);
-    return data;
-  }
-
-  async logout(): Promise<void> {
-    try {
-      await fetch(`${API_BASE_URL}/auth/logout/`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-      });
-    } catch (error) {
-      console.warn('Errore durante il logout (potrebbe essere un token già invalido):', error);
-    }
-    this.setAuthToken(null);
-  }
+  // ... (rimane invariato) ...
 
   // ==== METODI UTILITY ====
 

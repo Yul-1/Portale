@@ -17,6 +17,11 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils.decorators import method_decorator
 
+# Importazioni aggiunte per le email
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.conf import settings # Per accedere alle impostazioni di Django
+
 from .models import Alloggio, FotoAlloggio, Prenotazione
 from .serializers import (
     AlloggioCreateUpdateSerializer,
@@ -254,11 +259,93 @@ class PrenotazioneViewSet(viewsets.ModelViewSet):
         return queryset.select_related('alloggio')
     
     def perform_create(self, serializer):
-        """Salva la nuova prenotazione."""
+        """Salva la nuova prenotazione e invia le email di conferma/notifica."""
         prenotazione = serializer.save()
         
         # Log dell'operazione
         print(f"Nuova prenotazione creata: {prenotazione.id} - {prenotazione.ospite_nome}")
+
+        # Ottieni l'alloggio associato alla prenotazione
+        alloggio = prenotazione.alloggio 
+
+        # Contesto per i template email
+        email_context = {
+            'prenotazione': prenotazione,
+            'alloggio': alloggio,
+            'year': datetime.datetime.now().year, # Usa datetime.datetime.now().year
+        }
+
+        # --- Invio Email di Conferma all'Utente ---
+        try:
+            subject_user = f"Conferma Prenotazione: {alloggio.nome} - ID #{prenotazione.id}"
+            from_email = settings.DEFAULT_FROM_EMAIL
+            to_email_user = [prenotazione.ospite_email]
+
+            html_content_user = render_to_string('booking_confirmation_email.html', email_context)
+            text_content_user = f"""
+            Gentile {prenotazione.ospite_nome},
+
+            La tua prenotazione presso il nostro alloggio è stata confermata con successo!
+
+            Dettagli della Prenotazione:
+            Alloggio: {alloggio.nome}
+            Posizione: {alloggio.posizione}
+            Check-in: {prenotazione.data_checkin.strftime('%d/%m/%Y')}
+            Check-out: {prenotazione.data_checkout.strftime('%d/%m/%Y')}
+            Numero Ospiti: {prenotazione.numero_ospiti}
+            Prezzo Totale: {prenotazione.prezzo_totale} €
+            ID Prenotazione: {prenotazione.id}
+
+            Ti preghiamo di conservare questa email per riferimento futuro. Ti aspettiamo!
+            Se hai domande o necessiti di assistenza, non esitare a contattarci.
+
+            © {datetime.datetime.now().year} Portale Alloggi. Tutti i diritti riservati.
+            """
+
+            msg_user = EmailMultiAlternatives(subject_user, text_content_user, from_email, to_email_user)
+            msg_user.attach_alternative(html_content_user, "text/html")
+            msg_user.send()
+            print(f"Email di conferma inviata a: {prenotazione.ospite_email}")
+        except Exception as e:
+            print(f"Errore durante l'invio dell'email di conferma all'utente: {e}")
+            # Considera di loggare l'errore o di inviare una notifica all'amministratore
+
+        # --- Invio Email di Notifica all'Amministratore ---
+        try:
+            subject_admin = f"Nuova Prenotazione Ricevuta: {alloggio.nome} - ID #{prenotazione.id}"
+            from_email = settings.DEFAULT_FROM_EMAIL
+            to_email_admin = [settings.ADMIN_EMAIL] # Usa l'email dell'amministratore definita in settings
+
+            html_content_admin = render_to_string('admin_booking_notification_email.html', email_context)
+            text_content_admin = f"""
+            Ciao Amministratore,
+
+            È stata effettuata una nuova prenotazione sul Portale Alloggi.
+
+            Dettagli della Prenotazione:
+            ID Prenotazione: {prenotazione.id}
+            Alloggio: {alloggio.nome}
+            Posizione Alloggio: {alloggio.posizione}
+            Ospite: {prenotazione.ospite_nome}
+            Email Ospite: {prenotazione.ospite_email}
+            Telefono Ospite: {prenotazione.ospite_telefono}
+            Check-in: {prenotazione.data_checkin.strftime('%d/%m/%Y')}
+            Check-out: {prenotazione.data_checkout.strftime('%d/%m/%Y')}
+            Numero Ospiti: {prenotazione.numero_ospiti}
+            Prezzo Totale: {prenotazione.prezzo_totale} €
+
+            Accedi al pannello di amministrazione per maggiori dettagli.
+
+            © {datetime.datetime.now().year} Portale Alloggi. Tutti i diritti riservati.
+            """
+
+            msg_admin = EmailMultiAlternatives(subject_admin, text_content_admin, from_email, to_email_admin)
+            msg_admin.attach_alternative(html_content_admin, "text/html")
+            msg_admin.send()
+            print(f"Email di notifica inviata all'amministratore: {settings.ADMIN_EMAIL}")
+        except Exception as e:
+            print(f"Errore durante l'invio dell'email di notifica all'amministratore: {e}")
+            # Considera di loggare l'errore
     
     def perform_update(self, serializer):
         """Aggiorna la prenotazione esistente."""

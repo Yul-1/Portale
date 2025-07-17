@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nuova Prenotazione Ricevuta</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { width: 80%; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }
+        .header { background-color: #007bff; color: white; padding: 10px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { padding: 20px; }
+        .footer { text-align: center; font-size: 0.8em; color: #777; margin-top: 20px; }
+        .details { margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        .details p { margin: 5px 0; }
+        .highlight { font-weight: bold; color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Nuova Prenotazione Ricevuta!</h2>
+        </div>
+        <div class="content">
+            <p>Ciao Amministratore,</p>
+            <p>È stata effettuata una nuova prenotazione sul Portale Alloggi.</p>
+
+            <div class="details">
+                <h3>Dettagli della Prenotazione:</h3>
+                <p><strong>ID Prenotazione:</strong> <span class="highlight">{{ prenotazione.id }}</span></p>
+                <p><strong>Alloggio:</strong> <span class="highlight">{{ alloggio.nome }}</span></p>
+                <p><strong>Posizione Alloggio:</strong> {{ alloggio.posizione }}</p>
+                <p><strong>Ospite:</strong> <span class="highlight">{{ prenotazione.ospite_nome }}</span></p>
+                <p><strong>Email Ospite:</strong> {{ prenotazione.ospite_email }}</p>
+                <p><strong>Telefono Ospite:</strong> {{ prenotazione.ospite_telefono }}</p>
+                <p><strong>Check-in:</strong> <span class="highlight">{{ prenotazione.data_checkin|date:"d/m/Y" }}</span></p>
+                <p><strong>Check-out:</strong> <span class="highlight">{{ prenotazione.data_checkout|date:"d/m/Y" }}</span></p>
+                <p><strong>Numero Ospiti:</strong> {{ prenotazione.numero_ospiti }}</p>
+                <p><strong>Prezzo Totale:</strong> <span class="highlight">{{ prenotazione.prezzo_totale }} €</span></p>
+            </div>
+
+            <p>Accedi al pannello di amministrazione per maggiori dettagli.</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{ year }} Portale Alloggi. Tutti i diritti riservati.</p>
+        </div>
+    </div>
+</body>
+</html>

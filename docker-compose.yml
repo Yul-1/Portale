@@ -4,10 +4,12 @@ services:
   db:
     image: postgres:15-alpine
     container_name: portale_db
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: ${DB_NAME:-portale_db}
-      POSTGRES_USER: ${DB_USER:-portale_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-portale_password}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init/01_init.sql:/docker-entrypoint-initdb.d/01_init.sql  
@@ -117,3 +119,4 @@ volumes:
   frontend_node_modules:
   django_logs:
   nginx_logs:
+  db_logs:

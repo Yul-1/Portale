@@ -18,7 +18,6 @@ INSTALLED_APPS = [
     'corsheaders',           
     'drf_spectacular',       
     'api.apps.ApiConfig',  
-
 ]
 
 MIDDLEWARE = [
@@ -58,12 +57,29 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Configurazione Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+# Email di default per notifiche
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'noreply@portale.com'
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'gartiro@yahoo.it')
+
+# Se siamo in sviluppo e non abbiamo configurato l'email, usa console backend
+if DEBUG and not EMAIL_HOST_USER:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    print("⚠️  Usando console email backend per sviluppo")
+
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+        'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',  # COMMENTA
     ],
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
@@ -87,8 +103,8 @@ CORS_ALLOW_CREDENTIALS = True
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [], # Puoi aggiungere qui directory di template personalizzate, per ora la lasciamo vuota
-        'APP_DIRS': True, # Questa è la riga cruciale che dice a Django di cercare i template all'interno delle directory 'templates' delle app installate.
+        'DIRS': [BASE_DIR / 'templates'], # Aggiunta directory templates
+        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -99,17 +115,38 @@ TEMPLATES = [
         },
     },
 ]
-REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
-    ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        # 'rest_framework.authentication.SessionAuthentication',  # COMMENTA
-    ],
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
-    ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
+
+# Logging per debug email
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.core.mail': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
 }
+# Impostazioni Email
+# Per lo sviluppo, è consigliabile usare un servizio come Mailhog o un server SMTP locale.
+# Per la produzione, usa un servizio di email transazionale (es. SendGrid, Mailgun, AWS SES).
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.mailhog.local') # Indirizzo del server SMTP
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 1025)) # Porta del server SMTP (es. 1025 per Mailhog, 587 per TLS)
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() == 'true' # Usa TLS (True/False)
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '') # Nome utente SMTP (se richiesto)
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '') # Password SMTP (se richiesto)
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@yourdomain.com') # Indirizzo email predefinito del mittente
+SERVER_EMAIL = DEFAULT_FROM_EMAIL # Email usata per errori del server
+
+# Indirizzo email dell'amministratore per le notifiche (per ora, la stessa dell'utente)
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'gartiro@yahoo.it')
+
+# Per debug: se vuoi vedere le email nella console invece di inviarle realmente
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

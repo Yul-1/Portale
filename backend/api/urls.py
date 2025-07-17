@@ -1,25 +1,24 @@
-# Aggiorna il file backend/api/urls.py con questo contenuto completo
+# backend/api/urls.py
+
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
+from .views import AlloggioViewSet, FotoAlloggioViewSet, PrenotazioneViewSet, status_view, api_root, disponibilita_generale
 
-# Configurazione del router per le API REST
+# Crea un router predefinito
 router = DefaultRouter()
-router.register(r'alloggi', views.AlloggioViewSet, basename='alloggio')
-router.register(r'fotoalloggi', views.FotoAlloggioViewSet, basename='fotoalloggio')
-router.register(r'prenotazioni', views.PrenotazioneViewSet, basename='prenotazione')  # NUOVO
+# Registra i ViewSets con il router. Rimosso basename='alloggio'
+router.register(r'alloggi', AlloggioViewSet) # <-- Modificato qui
+router.register(r'fotoalloggi', FotoAlloggioViewSet)
+router.register(r'prenotazioni', PrenotazioneViewSet)
 
 urlpatterns = [
-    # Endpoint di stato per health check
-    path('status/', views.status_view, name='api_status'),
-    
-    # Endpoint specifico per verifica disponibilità generale
-    path('disponibilita/', views.disponibilita_generale, name='disponibilita_generale'),
-    
-    # Include tutte le route del router (alloggi, foto, prenotazioni)
-    path('', include(router.urls)),
+    path('', api_root, name='api-root'),
+    path('status/', status_view, name='status'),
+    path('disponibilita/', disponibilita_generale, name='disponibilita_generale'),
+    path('', include(router.urls)), 
 ]
+
 
 # Le seguenti route sono ora disponibili automaticamente tramite il router:
 #

@@ -1,0 +1,167 @@
+/* frontend/src/pages/BookingConfirmationPage.module.css */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    padding: 20px;
+    background-color: #f0f2f5;
+    color: #333;
+    text-align: center;
+}
+
+.title {
+    color: #28a745; /* Verde per successo */
+    margin-bottom: 30px;
+    font-size: 2.5em;
+    font-weight: bold;
+}
+
+.confirmationCard {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    max-width: 700px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.message {
+    font-size: 1.1em;
+    margin-bottom: 15px;
+    color: #555;
+}
+
+.highlight {
+    color: #007bff; /* Blu per evidenziare */
+    font-weight: bold;
+}
+
+.detailsSection {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    text-align: left;
+}
+
+.detailsSection h3 {
+    color: #343a40;
+    margin-bottom: 20px;
+    font-size: 1.6em;
+    text-align: center;
+}
+
+.detailsSection p {
+    margin: 10px 0;
+    font-size: 1em;
+    line-height: 1.5;
+}
+
+.detailsSection strong {
+    color: #343a40;
+}
+
+.totalPrice {
+    font-size: 1.3em;
+    color: #dc3545; /* Rosso per il prezzo */
+    font-weight: bold;
+    margin-top: 20px;
+}
+
+.status {
+    background-color: #28a745;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.actions {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.button {
+    background-color: #007bff;
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
+}
+
+.button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+.errorContainer {
+    background-color: #fff3cd; /* Giallo chiaro per errore */
+    border: 1px solid #ffeeba;
+    color: #856404;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.2);
+}
+
+.errorContainer h2 {
+    color: #dc3545; /* Rosso scuro per il titolo di errore */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    .title {
+        font-size: 2em;
+    }
+
+    .confirmationCard {
+        padding: 25px;
+    }
+
+    .message {
+        font-size: 1em;
+    }
+
+    .detailsSection h3 {
+        font-size: 1.4em;
+    }
+
+    .detailsSection p {
+        font-size: 0.9em;
+    }
+
+    .actions {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .button {
+        width: 100%;
+        padding: 10px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .title {
+        font-size: 1.8em;
+    }
+
+    .confirmationCard {
+        padding: 20px;
+    }
+}

@@ -1,3 +1,5 @@
+# backend/api/serializers.py
+
 from rest_framework import serializers
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
@@ -5,17 +7,16 @@ from .models import Alloggio, FotoAlloggio, Prenotazione
 import requests
 from django.core.files.base import ContentFile
 import re
-
+from datetime import date # Importa date per DisponibilitaSerializer
+from django.db.models import Q # Importa Q per DisponibilitaSerializer
+from django.utils import timezone # Importa timezone per le validazioni
 
 class FotoAlloggioSerializer(serializers.ModelSerializer):
     """
     Serializer per le foto degli alloggi.
     Gestisce sia upload di file che URL esterni.
     """
-    # Campo read-only per l'URL finale dell'immagine
     image_url = serializers.SerializerMethodField()
-    
-    # Override del campo immagine per gestire Base64
     immagine = serializers.ImageField(
         required=False,
         allow_null=True,
@@ -33,15 +34,12 @@ class FotoAlloggioSerializer(serializers.ModelSerializer):
         read_only_fields = ['larghezza_originale', 'altezza_originale', 'created_at', 'updated_at']
     
     def get_image_url(self, obj):
-        """Ritorna l'URL dell'immagine (locale o remoto)."""
         request = self.context.get('request')
         if obj.immagine and request:
             return request.build_absolute_uri(obj.immagine.url)
         return obj.url or ''
     
     def validate(self, data):
-        """Validazione custom per assicurare che ci sia immagine O url."""
-        # Se stiamo aggiornando, prendiamo i valori esistenti
         if self.instance:
             immagine = data.get('immagine', self.instance.immagine)
             url = data.get('url', self.instance.url)
@@ -49,26 +47,21 @@ class FotoAlloggioSerializer(serializers.ModelSerializer):
             immagine = data.get('immagine')
             url = data.get('url')
         
-        # Validazione: deve esserci almeno uno dei due
         if not immagine and not url:
             raise serializers.ValidationError(
                 "Devi fornire un'immagine o un URL."
             )
         
-        # Validazione: non possono esserci entrambi
         if immagine and url:
             raise serializers.ValidationError(
                 "Puoi fornire solo un'immagine O un URL, non entrambi."
             )
         
-        # Validazione URL se presente
         if url:
             validator = URLValidator()
             try:
                 validator(url)
-                # Verifica che sia un URL di immagine
                 if not re.match(r'.*\.(jpg|jpeg|png|gif|webp)(\?.*)?$', url.lower()):
-                    # Se non ha estensione, proviamo a verificare il content-type
                     try:
                         response = requests.head(url, timeout=5, allow_redirects=True)
                         content_type = response.headers.get('content-type', '')
@@ -77,7 +70,6 @@ class FotoAlloggioSerializer(serializers.ModelSerializer):
                                 "L'URL deve puntare a un'immagine valida."
                             )
                     except:
-                        # Se non riusciamo a verificare, accettiamo l'URL
                         pass
             except ValidationError:
                 raise serializers.ValidationError("URL non valido.")
@@ -94,7 +86,6 @@ class FotoAlloggioListSerializer(serializers.ModelSerializer):
         fields = ['id', 'image_url', 'descrizione', 'tipo', 'ordine']
     
     def get_image_url(self, obj):
-        """Ritorna l'URL dell'immagine (locale o remoto)."""
         request = self.context.get('request')
         if obj.immagine and request:
             return request.build_absolute_uri(obj.immagine.url)
@@ -118,7 +109,6 @@ class AlloggioListSerializer(serializers.ModelSerializer):
         ]
     
     def get_immagine_principale(self, obj):
-        """Ritorna l'URL dell'immagine principale."""
         request = self.context.get('request')
         foto = obj.foto.filter(ordine=0).first() or obj.foto.first()
         if foto:
@@ -148,7 +138,6 @@ class AlloggioDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
     
     def get_immagine_principale(self, obj):
-        """Ritorna l'URL dell'immagine principale."""
         request = self.context.get('request')
         foto = obj.foto.filter(ordine=0).first() or obj.foto.first()
         if foto:
@@ -158,7 +147,6 @@ class AlloggioDetailSerializer(serializers.ModelSerializer):
         return None
     
     def get_immagini(self, obj):
-        """Ritorna un array di URL delle immagini per compatibilità con il frontend."""
         request = self.context.get('request')
         urls = []
         for foto in obj.foto.all():
@@ -168,7 +156,6 @@ class AlloggioDetailSerializer(serializers.ModelSerializer):
                 urls.append(foto.url)
         return urls
     def validate_servizi(self, value):
-        """Valida che servizi sia una lista di stringhe."""
         if not isinstance(value, list):
             raise serializers.ValidationError("I servizi devono essere una lista.")
         
@@ -181,7 +168,6 @@ class AlloggioDetailSerializer(serializers.ModelSerializer):
         return value
     
     def validate_prezzo_notte(self, value):
-        """Validazione custom per il prezzo."""
         if value <= 0:
             raise serializers.ValidationError("Il prezzo deve essere maggiore di zero.")
         if value > 10000:
@@ -203,23 +189,17 @@ class AlloggioCreateUpdateSerializer(serializers.ModelSerializer):
         ]
     
     def validate_nome(self, value):
-        """Validazione del nome con sanitizzazione."""
-        # Rimuovi spazi multipli
         value = ' '.join(value.split())
         
-        # Verifica lunghezza
         if len(value) < 3:
             raise serializers.ValidationError("Il nome deve contenere almeno 3 caratteri.")
         
-        # Verifica caratteri speciali pericolosi
         if re.search(r'[<>\"\'&]', value):
             raise serializers.ValidationError("Il nome contiene caratteri non permessi.")
         
         return value
     
     def validate_descrizione(self, value):
-        """Sanitizzazione base della descrizione."""
-        # Rimuovi tag HTML potenzialmente pericolosi
         value = re.sub(r'<script.*?</script>', '', value, flags=re.IGNORECASE | re.DOTALL)
         value = re.sub(r'<iframe.*?</iframe>', '', value, flags=re.IGNORECASE | re.DOTALL)
         return value
@@ -244,19 +224,15 @@ class FotoAlloggioUploadSerializer(serializers.ModelSerializer):
         ]
     
     def validate_url_download(self, value):
-        """Valida e scarica l'immagine dall'URL."""
         if value:
             try:
-                # Scarica l'immagine con timeout
                 response = requests.get(value, timeout=10, stream=True)
                 response.raise_for_status()
                 
-                # Verifica il content-type
                 content_type = response.headers.get('content-type', '')
                 if not content_type.startswith('image/'):
                     raise serializers.ValidationError("L'URL non punta a un'immagine valida.")
                 
-                # Verifica la dimensione
                 content_length = response.headers.get('content-length')
                 if content_length and int(content_length) > 10 * 1024 * 1024:  # 10MB
                     raise serializers.ValidationError("L'immagine è troppo grande (max 10MB).")
@@ -267,26 +243,21 @@ class FotoAlloggioUploadSerializer(serializers.ModelSerializer):
         return value
     
     def create(self, validated_data):
-        """Crea la foto gestendo il download se necessario."""
         url_download = validated_data.pop('url_download', None)
         
         if url_download:
-            # Scarica e salva l'immagine
             try:
                 response = requests.get(url_download, timeout=10)
                 response.raise_for_status()
                 
-                # Estrai il nome del file dall'URL
                 filename = url_download.split('/')[-1].split('?')[0]
                 if not filename:
                     filename = 'downloaded_image.jpg'
                 
-                # Crea il file Django
                 validated_data['immagine'] = ContentFile(
                     response.content,
                     name=filename
                 )
-                # Rimuovi l'URL se stiamo salvando l'immagine localmente
                 validated_data.pop('url', None)
             except Exception as e:
                 raise serializers.ValidationError(f"Errore nel download: {str(e)}")
@@ -296,16 +267,63 @@ class FotoAlloggioUploadSerializer(serializers.ModelSerializer):
 
 class DisponibilitaSerializer(serializers.Serializer):
     """Serializer per verificare la disponibilità di un alloggio."""
+    alloggio_id = serializers.IntegerField() # Aggiunto alloggio_id
     check_in = serializers.DateField(required=True)
     check_out = serializers.DateField(required=True)
     
     def validate(self, data):
         """Valida che check_out sia dopo check_in."""
-        if data['check_out'] <= data['check_in']:
+        check_in = data['check_in']
+        check_out = data['check_out']
+        
+        if check_out <= check_in:
             raise serializers.ValidationError(
                 "La data di check-out deve essere successiva al check-in."
             )
+        
+        if check_in < timezone.now().date(): # Usa timezone.now().date()
+            raise serializers.ValidationError(
+                "La data di check-in non può essere nel passato."
+            )
+        
+        # Verifica che l'alloggio esista
+        try:
+            alloggio = Alloggio.objects.get(id=data['alloggio_id'])
+            data['alloggio'] = alloggio # Aggiungi l'oggetto alloggio ai dati validati
+        except Alloggio.DoesNotExist:
+            raise serializers.ValidationError(
+                "L'alloggio specificato non esiste."
+            )
+        
         return data
+
+    def get_disponibilita(self):
+        """Ritorna True se l'alloggio è disponibile per le date."""
+        validated_data = self.validated_data
+        alloggio = validated_data['alloggio']
+        check_in = validated_data['check_in']
+        check_out = validated_data['check_out']
+        
+        # DEBUG: Aggiungi log per la verifica disponibilità
+        print(f"DEBUG Disponibilita: Richiesta per Alloggio ID: {alloggio.id}, Check-in: {check_in}, Check-out: {check_out}")
+
+        overlapping_bookings = Prenotazione.objects.filter(
+            alloggio=alloggio,
+            check_in__lt=check_out,
+            check_out__gt=check_in,
+        ).exclude(
+            Q(stato='CANCELLATA') | Q(stato='RIFIUTATA')
+        )
+        
+        print(f"DEBUG Disponibilita: Trovate {overlapping_bookings.count()} prenotazioni sovrapposte (escluse cancellate/rifiutate):")
+        for booking in overlapping_bookings:
+            print(f"  - ID: {booking.id}, Ospite: {booking.ospite_nome}, Check-in: {booking.check_in}, Check-out: {booking.check_out}, Stato: {booking.stato}")
+
+        is_available = not overlapping_bookings.exists()
+        print(f"DEBUG Disponibilita: Risultato finale per Alloggio {alloggio.id} ({check_in} a {check_out}): {'Disponibile' if is_available else 'NON Disponibile'}")
+        
+        return is_available
+
 
 class PrenotazioneListSerializer(serializers.ModelSerializer):
     """
@@ -364,13 +382,18 @@ class PrenotazioneCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Prenotazione
+        # I nomi dei campi devono corrispondere al modello Prenotazione
         fields = [
-            'alloggio', 'check_in', 'check_out', 'numero_ospiti',
-            'ospite_nome', 'ospite_email', 'ospite_telefono', 'note_cliente'
+            'alloggio', 'ospite_nome', 'ospite_email', 
+            'ospite_telefono', # <-- Corretto: ospite_telefono
+            'check_in', 'check_out', # <-- Corretto: check_in, check_out
+            'numero_ospiti', 'prezzo_totale',
+            'stato', 'note_cliente' # <-- Corretto: note_cliente
         ]
-    
+        # Aggiunto numero_notti a read_only_fields perché è calcolato nel modello
+        read_only_fields = ['id', 'created_at', 'updated_at', 'numero_notti'] 
+
     def validate(self, data):
-        """Validazioni custom per la creazione."""
         from django.utils import timezone
         from datetime import timedelta
         
@@ -379,44 +402,37 @@ class PrenotazioneCreateSerializer(serializers.ModelSerializer):
         check_out = data.get('check_out')
         numero_ospiti = data.get('numero_ospiti')
         
-        # Validazione base delle date
         if check_out <= check_in:
             raise serializers.ValidationError(
                 "La data di check-out deve essere successiva al check-in."
             )
         
-        # Validazione data nel passato
         if check_in < timezone.now().date():
             raise serializers.ValidationError(
                 "La data di check-in non può essere nel passato."
             )
         
-        # Validazione soggiorno minimo (almeno 1 notte)
         if (check_out - check_in).days < 1:
             raise serializers.ValidationError(
                 "Il soggiorno deve essere di almeno 1 notte."
             )
         
-        # Validazione soggiorno massimo (max 30 giorni)
         if (check_out - check_in).days > 30:
             raise serializers.ValidationError(
                 "Il soggiorno non può superare i 30 giorni."
             )
         
-        # Validazione numero ospiti
         if alloggio and numero_ospiti > alloggio.numero_ospiti_max:
             raise serializers.ValidationError(
                 f"Il numero di ospiti ({numero_ospiti}) supera il massimo "
                 f"consentito per questo alloggio ({alloggio.numero_ospiti_max})."
             )
         
-        # Validazione disponibilità alloggio
         if not alloggio.is_available():
             raise serializers.ValidationError(
                 "L'alloggio selezionato non è attualmente disponibile."
             )
         
-        # Verifica conflitti con altre prenotazioni
         if not Prenotazione.check_disponibilita(alloggio, check_in, check_out):
             raise serializers.ValidationError(
                 "L'alloggio non è disponibile per le date selezionate. "
@@ -426,7 +442,6 @@ class PrenotazioneCreateSerializer(serializers.ModelSerializer):
         return data
     
     def validate_ospite_email(self, value):
-        """Validazione email ospite."""
         from django.core.validators import validate_email
         from django.core.exceptions import ValidationError as DjangoValidationError
         
@@ -435,22 +450,18 @@ class PrenotazioneCreateSerializer(serializers.ModelSerializer):
         except DjangoValidationError:
             raise serializers.ValidationError("Inserire un indirizzo email valido.")
         
-        return value.lower()  # Normalizza in minuscolo
+        return value.lower()
     
     def validate_ospite_nome(self, value):
-        """Validazione nome ospite."""
         if len(value.strip()) < 2:
             raise serializers.ValidationError(
                 "Il nome dell'ospite deve contenere almeno 2 caratteri."
             )
         
-        # Rimuovi spazi extra e capitalizza
         return ' '.join(word.capitalize() for word in value.strip().split())
     
     def validate_ospite_telefono(self, value):
-        """Validazione telefono ospite."""
         if value:
-            # Rimuovi spazi e caratteri non numerici tranne + per prefisso
             cleaned = ''.join(c for c in value if c.isdigit() or c == '+')
             if len(cleaned) < 10:
                 raise serializers.ValidationError(
@@ -475,16 +486,13 @@ class PrenotazioneUpdateSerializer(serializers.ModelSerializer):
         ]
     
     def validate(self, data):
-        """Validazioni custom per l'aggiornamento."""
         instance = self.instance
         
-        # Verifica se la prenotazione è modificabile
         if not instance.is_modificabile():
             raise serializers.ValidationError(
                 f"Impossibile modificare una prenotazione con stato '{instance.get_stato_display()}'."
             )
         
-        # Se si stanno modificando le date, verifica disponibilità
         check_in = data.get('check_in', instance.check_in)
         check_out = data.get('check_out', instance.check_out)
         
@@ -497,50 +505,3 @@ class PrenotazioneUpdateSerializer(serializers.ModelSerializer):
                 )
         
         return super().validate(data)
-
-
-class DisponibilitaSerializer(serializers.Serializer):
-    """
-    Serializer per verificare la disponibilità di un alloggio.
-    Non è collegato a un modello specifico.
-    """
-    alloggio_id = serializers.IntegerField()
-    check_in = serializers.DateField()
-    check_out = serializers.DateField()
-    
-    def validate(self, data):
-        """Validazioni per la verifica disponibilità."""
-        from django.utils import timezone
-        
-        check_in = data['check_in']
-        check_out = data['check_out']
-        
-        if check_out <= check_in:
-            raise serializers.ValidationError(
-                "La data di check-out deve essere successiva al check-in."
-            )
-        
-        if check_in < timezone.now().date():
-            raise serializers.ValidationError(
-                "La data di check-in non può essere nel passato."
-            )
-        
-        # Verifica che l'alloggio esista
-        try:
-            alloggio = Alloggio.objects.get(id=data['alloggio_id'])
-            data['alloggio'] = alloggio
-        except Alloggio.DoesNotExist:
-            raise serializers.ValidationError(
-                "L'alloggio specificato non esiste."
-            )
-        
-        return data
-    
-    def get_disponibilita(self):
-        """Ritorna True se l'alloggio è disponibile per le date."""
-        validated_data = self.validated_data
-        alloggio = validated_data['alloggio']
-        check_in = validated_data['check_in']
-        check_out = validated_data['check_out']
-        
-        return Prenotazione.check_disponibilita(alloggio, check_in, check_out)

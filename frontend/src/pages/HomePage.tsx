@@ -70,10 +70,7 @@ const HomePage: React.FC = () => {
       console.log('Risposta API per gli alloggi:', response);
 
       // Accedi direttamente all'array degli alloggi annidato nel campo 'results' dell'oggetto 'results'
-      const alloggiDalBackend: AlloggioData[] = response.results.results;
-
-      // Mappa i dati per includere il campo 'immagine' per la visualizzazione nel frontend
-      // Usiamo immagine_principale come fonte primaria
+      const alloggiDalBackend: AlloggioData[] = response.results;      // Usiamo immagine_principale come fonte primaria
       const alloggiMappatiPerFrontend: AlloggioData[] = alloggiDalBackend.map(alloggio => ({
         ...alloggio, // Copia tutte le proprietà esistenti dall'oggetto alloggio
         immagine: alloggio.immagine_principale || // Priorità all'immagine principale

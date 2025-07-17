@@ -23,6 +23,27 @@ services:
       - static_volume:/app/staticfiles # Necessario se collectstatic è eseguito
       - media_volume:/app/media # <--- AGGIUNTO: per persistenza media in sviluppo
       - django_logs:/app/logs # Per i log persistenti in sviluppo 
+    environment:
+      # Variabili d'ambiente per la configurazione email
+      EMAIL_HOST: mailhog
+      EMAIL_PORT: 1025
+      EMAIL_USE_TLS: "False" # Per Mailhog, non usiamo TLS
+      EMAIL_HOST_USER: "" # Mailhog non richiede utente
+      EMAIL_HOST_PASSWORD: "" # Mailhog non richiede password
+      DEFAULT_FROM_EMAIL: "noreply@portale.local"
+      ADMIN_EMAIL: "gartiro@yahoo.it" # L'email dell'amministratore
+    depends_on:
+      - db
+      - mailhog # Aggiungi la dipendenza da mailhog
+
+  mailhog:
+    image: mailhog/mailhog
+    logging:
+      driver: 'none' # Opzionale: disabilita i log di Mailhog per non intasare la console
+    ports:
+      - "8025:8025" # Interfaccia web di Mailhog
+      - "1025:1025" # Porta SMTP di Mailhog
+
 
   frontend:
     # Sovrascrive il CMD del Dockerfile per usare il server di sviluppo di React
