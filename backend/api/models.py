@@ -226,3 +226,164 @@ class FotoAlloggio(models.Model):
         Per ora ritorna l'immagine originale.
         """
         return self.get_image_url()
+
+class Prenotazione(models.Model):
+    """
+    Modello per rappresentare una prenotazione di un alloggio.
+    Mappato sulla tabella portale.prenotazioni nel database PostgreSQL.
+    """
+    
+    STATO_CHOICES = [
+        ('PENDENTE', 'Pendente'),
+        ('CONFERMATA', 'Confermata'),
+        ('PAGATA', 'Pagata'),
+        ('COMPLETATA', 'Completata'),
+        ('CANCELLATA', 'Cancellata'),
+        ('RIFIUTATA', 'Rifiutata'),
+    ]
+    
+    # Relazione con l'alloggio
+    alloggio = models.ForeignKey(
+        Alloggio, 
+        on_delete=models.CASCADE, 
+        related_name='prenotazioni'
+    )
+    
+    # Date di soggiorno
+    check_in = models.DateField()
+    check_out = models.DateField()
+    
+    # Informazioni ospiti
+    numero_ospiti = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(20)]
+    )
+    
+    # Dati ospite principale
+    ospite_nome = models.CharField(max_length=255)
+    ospite_email = models.EmailField()
+    ospite_telefono = models.CharField(max_length=20, blank=True)
+    
+    # Informazioni prenotazione
+    stato = models.CharField(
+        max_length=15, 
+        choices=STATO_CHOICES, 
+        default='PENDENTE'
+    )
+    
+    # Calcoli automatici
+    numero_notti = models.IntegerField(editable=False)
+    prezzo_totale = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        editable=False
+    )
+    
+    # Note e richieste speciali
+    note_cliente = models.TextField(blank=True)
+    note_interne = models.TextField(blank=True)
+    
+    # Metadati
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'prenotazioni'
+        db_table_comment = 'Tabella delle prenotazioni degli alloggi'
+        ordering = ['-created_at']
+        verbose_name = 'Prenotazione'
+        verbose_name_plural = 'Prenotazioni'
+        # RIMOSSE tutte le constraints - la validazione avviene a livello applicazione
+    
+    def __str__(self):
+        return f"{self.alloggio.nome} - {self.ospite_nome} ({self.check_in} to {self.check_out})"
+    
+    def clean(self):
+        """Validazioni custom del modello."""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+        
+        # Valida che check_out sia dopo check_in
+        if self.check_in and self.check_out and self.check_out <= self.check_in:
+            raise ValidationError('La data di check-out deve essere successiva al check-in.')
+        
+        # Valida che il check_in non sia nel passato
+        if self.check_in and self.check_in < timezone.now().date():
+            raise ValidationError('La data di check-in non può essere nel passato.')
+        
+        # Valida numero ospiti
+        if self.alloggio and self.numero_ospiti > self.alloggio.numero_ospiti_max:
+            raise ValidationError(
+                f'Il numero di ospiti ({self.numero_ospiti}) supera il massimo consentito '
+                f'per questo alloggio ({self.alloggio.numero_ospiti_max}).'
+            )
+    
+    def save(self, *args, **kwargs):
+        """Override del save per calcoli automatici."""
+        # Calcola numero notti
+        if self.check_in and self.check_out:
+            delta = self.check_out - self.check_in
+            self.numero_notti = delta.days
+        
+        # Calcola prezzo totale
+        if self.alloggio and self.numero_notti:
+            self.prezzo_totale = self.alloggio.prezzo_notte * self.numero_notti
+        
+        # Esegui validazioni
+        self.full_clean()
+        
+        super().save(*args, **kwargs)
+    
+    def is_confermata(self):
+        """Verifica se la prenotazione è confermata."""
+        return self.stato in ['CONFERMATA', 'PAGATA', 'COMPLETATA']
+    
+    def is_modificabile(self):
+        """Verifica se la prenotazione può essere modificata."""
+        return self.stato in ['PENDENTE', 'CONFERMATA']
+    
+    def is_cancellabile(self):
+        """Verifica se la prenotazione può essere cancellata."""
+        from django.utils import timezone
+        # Può essere cancellata se è modificabile e il check-in è almeno domani
+        return (self.is_modificabile() and 
+                self.check_in > timezone.now().date())
+    
+    @classmethod
+    def check_disponibilita(cls, alloggio, check_in, check_out, exclude_id=None):
+        """
+        Verifica se un alloggio è disponibile per le date specificate.
+        
+        Args:
+            alloggio: Istanza di Alloggio
+            check_in: Data di check-in
+            check_out: Data di check-out
+            exclude_id: ID prenotazione da escludere (per modifiche)
+        
+        Returns:
+            bool: True se disponibile, False altrimenti
+        """
+        from django.db.models import Q
+        
+        # Query per prenotazioni sovrapposte
+        overlapping = cls.objects.filter(
+            alloggio=alloggio,
+            stato__in=['PENDENTE', 'CONFERMATA', 'PAGATA']
+        ).filter(
+            Q(check_in__lt=check_out) & Q(check_out__gt=check_in)
+        )
+        
+        # Escludi una prenotazione specifica (per modifiche)
+        if exclude_id:
+            overlapping = overlapping.exclude(id=exclude_id)
+        
+        return not overlapping.exists()
+    
+    def get_conflitti(self):
+        """Ritorna le prenotazioni in conflitto con questa."""
+        return Prenotazione.objects.filter(
+            alloggio=self.alloggio,
+            stato__in=['PENDENTE', 'CONFERMATA', 'PAGATA']
+        ).filter(
+            models.Q(check_in__lt=self.check_out) & 
+            models.Q(check_out__gt=self.check_in)
+        ).exclude(id=self.id)

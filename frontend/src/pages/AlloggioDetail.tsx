@@ -14,6 +14,13 @@ const AlloggioDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+// Stati per prenotazioni
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
+  const [numeroOspiti, setNumeroOspiti] = useState(1);
+  const [disponibile, setDisponibile] = useState<boolean | null>(null);
+  const [verificandoDisponibilita, setVerificandoDisponibilita] = useState(false);
+
   // Dati di fallback per un alloggio singolo, in caso di errore di caricamento o ID non valido
   // Assicurati che questi dati rispecchino la struttura completa di AlloggioData da api.ts
   const alloggioFallback: AlloggioData = {
@@ -58,37 +65,46 @@ const AlloggioDetail: React.FC = () => {
           setCurrentImageIndex(0);
         } else {
           // Nessuna immagine disponibile, usa il placeholder
-          setAlloggio(prev => prev ? { ...prev, foto: [{ id: 0, image_url: 'https://via.placeholder.com/800x600?text=Nessuna+Immagine', descrizione: 'Nessuna immagine disponibile', tipo: 'altro', ordine: 0 }] } : null);
+          setAlloggio(prev => prev ? {
+            ...prev,
+            foto: [{
+              id: 0,
+              image_url: 'https://via.placeholder.com/800x600?text=Nessuna+Immagine+Disponibile',
+              descrizione: 'Immagine placeholder',
+              tipo: 'altro',
+              ordine: 0
+            }]
+          } : null);
           setCurrentImageIndex(0);
         }
 
       } catch (err) {
-        console.error('Errore nel caricamento dell\'alloggio dal backend:', err);
-        // Cattura il messaggio d'errore specifico per mostrarlo all'utente
-        setError(`Impossibile caricare i dettagli dell\'alloggio. ${err instanceof Error ? err.message : 'Si prega di riprovare più tardi.'}`);
-        setAlloggio(alloggioFallback); // Usa i dati di fallback in caso di errore
+        console.error('Errore caricamento alloggio:', err);
+        setError('Errore nel caricamento dei dati dell\'alloggio.');
+        setAlloggio(alloggioFallback);
       } finally {
         setLoading(false);
       }
     };
 
-    loadAlloggioData(); // Invoca la funzione di caricamento dati
-  }, [id]); // Re-invoca se l'ID nell'URL cambia
+    loadAlloggioData();
+  }, [id]);
 
-  // Funzioni per la navigazione nella galleria (se più di una foto)
+  // Gestione errore immagini
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.src = 'https://via.placeholder.com/800x600?text=Immagine+Non+Disponibile';
+  };
+
+  // Navigazione immagini
   const handlePrevImage = () => {
-    if (alloggio && alloggio.foto && alloggio.foto.length > 0) {
-      setCurrentImageIndex((prevIndex) =>
-        prevIndex === 0 ? alloggio.foto!.length - 1 : prevIndex - 1
-      );
+    if (alloggio?.foto && alloggio.foto.length > 0) {
+      setCurrentImageIndex((prev) => (prev - 1 + alloggio.foto!.length) % alloggio.foto!.length);
     }
   };
 
   const handleNextImage = () => {
-    if (alloggio && alloggio.foto && alloggio.foto.length > 0) {
-      setCurrentImageIndex((prevIndex) =>
-        prevIndex === alloggio.foto!.length - 1 ? 0 : prevIndex + 1
-      );
+    if (alloggio?.foto && alloggio.foto.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % alloggio.foto!.length);
     }
   };
 
@@ -96,64 +112,106 @@ const AlloggioDetail: React.FC = () => {
     setCurrentImageIndex(index);
   };
 
-  // Funzione per gestire errori di caricamento delle singole immagini
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = 'https://via.placeholder.com/800x600?text=Immagine+Non+Disponibile'; // Fallback per singola immagine
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: '50px' }}>Caricamento...</div>;
+  }
+
+  if (error || !alloggio) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <h1>Errore</h1>
+        <p>{error || 'Alloggio non trovato'}</p>
+        <Link to="/">← Torna alla Homepage</Link>
+      </div>
+    );
+  }
+// Funzioni helper per prenotazioni
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
   };
 
+  const getMinCheckOut = () => {
+    if (!checkIn) return getTodayDate();
+    const checkInDate = new Date(checkIn);
+    checkInDate.setDate(checkInDate.getDate() + 1);
+    return checkInDate.toISOString().split('T')[0];
+  };
 
-  if (loading) {
-    return (
-      <div className={styles.loading}>
-        <p>Caricamento dettagli alloggio...</p>
-      </div>
-    );
-  }
+  const verificaDisponibilita = async () => {
+    if (!alloggio || !checkIn || !checkOut) return;
+    
+    console.log('Verificando disponibilità per:', {
+      alloggio: alloggio.id,
+      checkIn,
+      checkOut
+    });
+    
+    try {
+      setVerificandoDisponibilita(true);
+      
+      const url = `https://localhost/api/disponibilita/?alloggio_id=${alloggio.id}&check_in=${checkIn}&check_out=${checkOut}`;
+      console.log('URL chiamata:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      console.log('Risposta disponibilità:', data);
+      
+      if (!response.ok) {
+        console.error('Errore response:', data);
+        setDisponibile(false);
+        return;
+      }
+      
+      setDisponibile(data.disponibile || false);
+      
+    } catch (err) {
+      console.error('Errore verifica disponibilità:', err);
+      setDisponibile(false);
+    } finally {
+      setVerificandoDisponibilita(false);
+    }
+  };
 
-  // Gestione dell'errore (quando setError è stato chiamato)
-  if (error) {
-    return (
-      <div className={styles.notFound}> {/* Usa la classe .notFound esistente */}
-        <h2>Errore</h2>
-        <p>{error}</p>
-        <Link to="/" className={styles.backLink}>Torna alla Home</Link>
-      </div>
-    );
-  }
-
-  // Gestione dell'alloggio non trovato (alloggio è null o non ha un ID valido dopo il caricamento)
-  if (!alloggio || !alloggio.id) {
-    return (
-      <div className={styles.notFound}>
-        <h2>Alloggio non trovato</h2>
-        <Link to="/" className={styles.backLink}>Torna alla Home</Link>
-      </div>
-    );
-  }
-
-  // Determina l'URL dell'immagine principale da visualizzare nella galleria
-  const mainImageSrc = (alloggio.foto && alloggio.foto.length > 0)
-    ? alloggio.foto[currentImageIndex].image_url // Se ci sono foto nell'array 'foto'
-    : alloggio.immagine_principale || 'https://via.placeholder.com/800x600?text=Nessuna+Immagine'; // Altrimenti immagine principale o fallback
-
+  const handlePrenotaClick = () => {
+    if (!alloggio) return;
+    
+    if (checkIn && checkOut && disponibile) {
+      // Naviga alla pagina BookingPage
+      navigate(`/prenotazioni/nuovo/${alloggio.id}`, {
+        state: {
+          alloggio,
+          checkIn,
+          checkOut,
+          numeroOspiti
+        }
+      });
+    } else {
+      alert('Verifica prima la disponibilità per le date selezionate');
+    }
+  };
 
   return (
     <div className={styles.detailPage}>
-      {/* Header con navigazione */}
+      {/* Header */}
       <header className={styles.header}>
-        <div className={styles.headerContent}>
-          <Link to="/" className={styles.backLink}>← Torna alla home</Link>
-          <h1>{alloggio.nome}</h1>
-        </div>
+        <Link to="/" className={styles.backLink}>← Torna agli alloggi</Link>
+        <h1>{alloggio.nome}</h1>
+        <p>📍 {alloggio.posizione}</p>
       </header>
 
-      {/* Galleria Immagini */}
+      {/* Gallery */}
       <section className={styles.gallery}>
         <div className={styles.mainImage}>
           <img
-            src={mainImageSrc}
-            alt={alloggio.nome + ' - ' + (alloggio.foto && alloggio.foto.length > 0 ? alloggio.foto[currentImageIndex].descrizione : 'Immagine principale')}
+            src={alloggio.foto && alloggio.foto.length > 0 ? alloggio.foto[currentImageIndex].image_url : alloggio.immagine_principale || 'https://via.placeholder.com/800x600?text=Nessuna+Immagine'}
+            alt={alloggio.foto && alloggio.foto.length > 0 ? (alloggio.foto[currentImageIndex].descrizione || 'Immagine principale') : 'Immagine principale'}
             onError={handleImageError}
             loading="lazy"
           />
@@ -239,13 +297,16 @@ const AlloggioDetail: React.FC = () => {
             </div>
 
             <form onSubmit={(e) => { e.preventDefault(); alert('Funzione di prenotazione non implementata.'); }} className={styles.bookingForm}>
+                          <div className={styles.bookingForm}>
               <div className={styles.dateInputs}>
                 <div className={styles.inputGroup}>
                   <label htmlFor="checkIn">Check-in</label>
                   <input
                     type="date"
                     id="checkIn"
-                    value="" // Sarà gestito da stato in fasi future
+                    value={checkIn}
+                    onChange={(e) => setCheckIn(e.target.value)}
+                    min={getTodayDate()}
                     required
                   />
                 </div>
@@ -254,7 +315,9 @@ const AlloggioDetail: React.FC = () => {
                   <input
                     type="date"
                     id="checkOut"
-                    value="" // Sarà gestito da stato in fasi future
+                    value={checkOut}
+                    onChange={(e) => setCheckOut(e.target.value)}
+                    min={getMinCheckOut()}
                     required
                   />
                 </div>
@@ -264,7 +327,8 @@ const AlloggioDetail: React.FC = () => {
                 <label htmlFor="ospiti">Numero ospiti</label>
                 <select
                   id="ospiti"
-                  defaultValue="1" // Sarà gestito da stato in fasi future
+                  value={numeroOspiti}
+                  onChange={(e) => setNumeroOspiti(parseInt(e.target.value))}
                 >
                   {[...Array(alloggio.numero_ospiti_max)].map((_, i) => (
                     <option key={i + 1} value={i + 1}>
@@ -274,27 +338,64 @@ const AlloggioDetail: React.FC = () => {
                 </select>
               </div>
 
-              {/* Rimuovi calcolaTotale e priceBreakdown per ora, in quanto non abbiamo lo stato delle date */}
-              {/* checkIn && checkOut && (
-                <div className={styles.priceBreakdown}>
-                  <div className={styles.priceRow}>
-                    <span>Totale ({Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 3600 * 24))} notti)</span>
-                    <span>€{calcolaTotale()}</span>
-                  </div>
+              {/* Verifica disponibilità */}
+              {checkIn && checkOut && (
+                <div style={{ margin: '20px 0' }}>
+                  <button
+                    type="button"
+                    onClick={verificaDisponibilita}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px',
+                      borderRadius: '5px',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      cursor: verificandoDisponibilita ? 'not-allowed' : 'pointer',
+                      marginBottom: '10px',
+                      opacity: verificandoDisponibilita ? 0.6 : 1
+                    }}
+                    disabled={verificandoDisponibilita}
+                  >
+                    {verificandoDisponibilita ? 'Verifica in corso...' : 'Verifica Disponibilità'}
+                  </button>
+                  
+                  {disponibile !== null && (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '10px',
+                      borderRadius: '5px',
+                      fontWeight: '600',
+                      backgroundColor: disponibile ? '#d4edda' : '#f8d7da',
+                      color: disponibile ? '#155724' : '#721c24',
+                      border: `1px solid ${disponibile ? '#c3e6cb' : '#f5c6cb'}`
+                    }}>
+                      {disponibile ? '✅ Disponibile' : '❌ Non disponibile'}
+                    </div>
+                  )}
                 </div>
-              )*/}
+              )}
 
               <button
-                type="submit"
+                type="button"
+                onClick={handlePrenotaClick}
                 className={styles.bookButton}
-                // disabled={!checkIn || !checkOut} // disabilitato se non abbiamo stato date
+                disabled={!checkIn || !checkOut || disponibile !== true}
+                style={{
+                  opacity: (!checkIn || !checkOut || disponibile !== true) ? 0.5 : 1,
+                  cursor: (!checkIn || !checkOut || disponibile !== true) ? 'not-allowed' : 'pointer'
+                }}
               >
-                Verifica Disponibilità e Prenota
+                {disponibile === true ? 'Prenota Ora' : 'Verifica Disponibilità'}
               </button>
+            </div>
             </form>
           </div>
         </aside>
       </div>
+      
       <section className={styles.mapSection}>
         <h2>Posizione</h2>
         <div className={styles.mapContainer}>
