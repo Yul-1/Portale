@@ -1,9 +1,8 @@
 // frontend/src/pages/HomePage.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styles from './HomePage.module.css';
-// Importa le interfacce corrette da api.ts
 import apiService, { AlloggioData as OriginalAlloggioData, ApiListResponse } from '../services/api';
 
 // Estendi AlloggioData per includere la proprietà 'immagine' usata nel frontend
@@ -26,6 +25,14 @@ const HomePage: React.FC = () => {
   const [alloggi, setAlloggi] = useState<AlloggioData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const [searchParams, setSearchParams] = useState({
+    checkin: '',
+    checkout: '',
+  });
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Dati di fallback (assicurati che rispettino l'interfaccia AlloggioData completa)
   const alloggiFallback: AlloggioData[] = [
@@ -56,6 +63,52 @@ const HomePage: React.FC = () => {
       immagine_principale: '/images/alloggi/villa-aurora.jpg'
     }
   ];
+  
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const { id, value } = e.target;
+    setSearchParams(prev => ({
+      ...prev,
+      [id]: value,
+    }));
+  };
+
+  const handleSearch = async () => {
+    // Validazione
+    if (!searchParams.checkin || !searchParams.checkout) {
+      setSearchError('Per favore, seleziona sia la data di check-in che quella di check-out.');
+      return;
+    }
+    if (new Date(searchParams.checkout) <= new Date(searchParams.checkin)) {
+      setSearchError('La data di check-out deve essere successiva a quella di check-in.');
+      return;
+    }
+
+    setSearchError(null);
+    setIsSearching(true);
+
+    try {
+      // Chiamata API
+      const results = await apiService.cercaDisponibilita(
+        searchParams.checkin,
+        searchParams.checkout
+      );
+
+      // Navigazione alla pagina dei risultati con i dati
+      navigate('/risultati-disponibilita', {
+        state: {
+          results: results,
+          checkIn: searchParams.checkin,
+          checkOut: searchParams.checkout,
+        },
+      });
+
+    } catch (err) {
+      console.error('Errore durante la ricerca della disponibilità:', err);
+      setSearchError(err instanceof Error ? err.message : 'Si è verificato un errore. Riprova più tardi.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   useEffect(() => {
     loadAlloggi();
@@ -154,25 +207,36 @@ const HomePage: React.FC = () => {
         <h2>Controlla la Disponibilità</h2>
         <div className={styles.searchContainer}>
           <div className={styles.dateInputs}>
-            <div className={styles.inputGroup}>
-              <label htmlFor="checkin">Check-in</label>
-              <input type="date" id="checkin" />
-            </div>
-            <div className={styles.inputGroup}>
-              <label htmlFor="checkout">Check-out</label>
-              <input type="date" id="checkout" />
-            </div>
-            <div className={styles.inputGroup}>
-              <label htmlFor="ospiti">Ospiti</label>
-              <select id="ospiti">
-                <option value="1">1 ospite</option>
-                <option value="2">2 ospiti</option>
-                <option value="3">3 ospiti</option>
-                <option value="4">4+ ospiti</option>
-              </select>
-            </div>
+        <div className={styles.inputGroup}>
+          <label htmlFor="checkin">Check-in</label>
+          <input
+            type="date"
+            id="checkin"
+            value={searchParams.checkin}
+            onChange={handleDateChange}
+            min={new Date().toISOString().split('T')[0]} // Imposta data minima a oggi
+          />
+        </div>
+        <div className={styles.inputGroup}>
+          <label htmlFor="checkout">Check-out</label>
+          <input
+            type="date"
+            id="checkout"
+            value={searchParams.checkout}
+            onChange={handleDateChange}
+            min={searchParams.checkin || new Date().toISOString().split('T')[0]} // Data minima dinamica
+          />
+        </div>
           </div>
-          <button className={styles.searchButton}>Cerca Disponibilità</button>
+          {/* Mostra errore di ricerca se presente */}
+          {searchError && <p className={styles.errorMessage}>{searchError}</p>}
+          <button
+        className={styles.searchButton}
+        onClick={handleSearch}
+        disabled={isSearching}
+          >
+        {isSearching ? 'Ricerca in corso...' : 'Cerca Disponibilità'}
+          </button>
         </div>
       </section>
 

@@ -3,7 +3,7 @@
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import AlloggioViewSet, FotoAlloggioViewSet, PrenotazioneViewSet, status_view, api_root, disponibilita_generale
+from .views import AlloggioViewSet, FotoAlloggioViewSet, PrenotazioneViewSet, status_view, api_root, disponibilita_generale, VerificaDisponibilitaView
 
 # Crea un router predefinito
 router = DefaultRouter()
@@ -17,6 +17,8 @@ urlpatterns = [
     path('status/', status_view, name='status'),
     path('disponibilita/', disponibilita_generale, name='disponibilita_generale'),
     path('', include(router.urls)), 
+    path('verifica-disponibilita/', VerificaDisponibilitaView.as_view(), name='verifica-disponibilita'),
+
 ]
 
 

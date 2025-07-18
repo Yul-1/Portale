@@ -397,3 +397,17 @@
     align-items: center;
   }
 }
+
+.errorMessage {
+  color: #dc3545;
+  background-color: #f8d7da; 
+  border: 1px solid #f5c6cb;
+  padding: 10px 15px;
+  border-radius: 5px;
+  margin-top: 0;
+  margin-bottom: 20px;
+  text-align: center;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}

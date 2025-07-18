@@ -16,6 +16,9 @@ from rest_framework.response import Response
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils.decorators import method_decorator
+from rest_framework.views import APIView
+from django.db.models import Q
+from datetime import date as date_obj
 
 # Importazioni aggiunte per le email
 from django.core.mail import EmailMultiAlternatives
@@ -532,3 +535,50 @@ def disponibilita_generale(request):
         'disponibile': disponibile,
         'message': 'Disponibile' if disponibile else 'Non disponibile per le date selezionate'
     })
+# === NUOVA VISTA PER LA RICERCA GLOBALE ===
+
+class VerificaDisponibilitaView(APIView):
+    """
+    Una vista per verificare la disponibilità di TUTTI gli alloggi in un dato range di date.
+    Risponde a GET /api/verifica-disponibilita/?data_inizio=YYYY-MM-DD&data_fine=YYYY-MM-DD
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        data_inizio_str = request.query_params.get('data_inizio')
+        data_fine_str = request.query_params.get('data_fine')
+
+        if not data_inizio_str or not data_fine_str:
+            return Response(
+                {"error": "I parametri 'data_inizio' e 'data_fine' sono obbligatori."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            data_inizio = date_obj.fromisoformat(data_inizio_str)
+            data_fine = date_obj.fromisoformat(data_fine_str)
+        except ValueError:
+            return Response(
+                {"error": "Formato data non valido. Usare YYYY-MM-DD."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if data_inizio >= data_fine:
+            return Response(
+                {"error": "La data di inizio deve essere precedente alla data di fine."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Trova gli ID degli alloggi che hanno prenotazioni confermate o pendenti che si sovrappongono.
+        # Una prenotazione si sovrappone se (inizio_prenotazione < data_fine_ricerca) E (fine_prenotazione > data_inizio_ricerca)
+        alloggi_occupati_ids = Prenotazione.objects.filter(
+            Q(stato__in=['CONFERMATA', 'PENDENTE']),
+            Q(check_in__lt=data_fine) & Q(check_out__gt=data_inizio)
+        ).values_list('alloggio_id', flat=True).distinct()
+
+        # Trova tutti gli alloggi che NON sono in quella lista e che sono marcati come disponibili
+        alloggi_disponibili = Alloggio.objects.filter(disponibile=True).exclude(id__in=alloggi_occupati_ids)
+
+        # Usa lo stesso serializer della lista per consistenza
+        serializer = AlloggioListSerializer(alloggi_disponibili, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)

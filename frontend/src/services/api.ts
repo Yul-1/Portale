@@ -224,8 +224,17 @@ class ApiService {
     return data.disponibile;
   }
 
-  // ==== METODI DI AUTENTICAZIONE ====
-  // ... (rimane invariato) ...
+    async cercaDisponibilita(data_inizio: string, data_fine: string): Promise<AlloggioData[]> {
+    const url = new URL(`${API_BASE_URL}/verifica-disponibilita/`);
+    url.searchParams.append('data_inizio', data_inizio);
+    url.searchParams.append('data_fine', data_fine);
+
+    const response = await fetch(url.toString(), {
+      headers: this.getHeaders(),
+    });
+    // Questo endpoint restituisce direttamente un array di alloggi, non un oggetto paginato
+    return this.handleResponse<AlloggioData[]>(response);
+  }
 
   // ==== METODI UTILITY ====
 

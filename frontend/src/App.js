@@ -7,6 +7,7 @@
     import AlloggioDetail from './pages/AlloggioDetail'; // Rimosso .tsx
     import BookingPage from './pages/BookingPage'; // Rimosso .tsx
     import BookingConfirmationPage from './pages/BookingConfirmationPage'; // Rimosso .tsx
+    import AvailabilityResultsPage from './pages/AvailabilityResultsPage'; // Rimosso .tsx    
 
     import './App.css';
 
@@ -19,6 +20,8 @@
               <Route path="/alloggi/dettaglio/:id" element={<AlloggioDetail />} />
               <Route path="/prenotazioni/:alloggioId?" element={<BookingPage />} />
               <Route path="/prenotazione-confermata" element={<BookingConfirmationPage />} />
+              <Route path="/risultati-disponibilita" element={<AvailabilityResultsPage />} />
+
               {/* Rotte TODO esistenti */}
               <Route path="/galleria" element={<div style={{padding: '50px'}}>Galleria (TODO)</div>} />
               <Route path="/privacy-policy" element={<div style={{padding: '50px'}}>Privacy Policy (TODO)</div>} />
