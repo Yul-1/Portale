@@ -224,10 +224,14 @@ class ApiService {
     return data.disponibile;
   }
 
-    async cercaDisponibilita(data_inizio: string, data_fine: string): Promise<AlloggioData[]> {
+    async cercaDisponibilita(data_inizio: string, data_fine: string, numero_ospiti?: number): Promise<AlloggioData[]> {
     const url = new URL(`${API_BASE_URL}/verifica-disponibilita/`);
     url.searchParams.append('data_inizio', data_inizio);
     url.searchParams.append('data_fine', data_fine);
+    
+    if (numero_ospiti && numero_ospiti > 0) {
+      url.searchParams.append('numero_ospiti', numero_ospiti.toString());
+    }
 
     const response = await fetch(url.toString(), {
       headers: this.getHeaders(),

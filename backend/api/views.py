@@ -547,6 +547,7 @@ class VerificaDisponibilitaView(APIView):
     def get(self, request, *args, **kwargs):
         data_inizio_str = request.query_params.get('data_inizio')
         data_fine_str = request.query_params.get('data_fine')
+        numero_ospiti_str = request.query_params.get('numero_ospiti')
 
         if not data_inizio_str or not data_fine_str:
             return Response(
@@ -578,6 +579,18 @@ class VerificaDisponibilitaView(APIView):
 
         # Trova tutti gli alloggi che NON sono in quella lista e che sono marcati come disponibili
         alloggi_disponibili = Alloggio.objects.filter(disponibile=True).exclude(id__in=alloggi_occupati_ids)
+        if numero_ospiti_str:
+            try:
+                numero_ospiti = int(numero_ospiti_str)
+                if numero_ospiti > 0:
+                    # Filtra gli alloggi che possono ospitare ALMENO il numero di ospiti richiesto
+                    alloggi_disponibili = alloggi_disponibili.filter(numero_ospiti_max__gte=numero_ospiti)
+            except (ValueError, TypeError):
+                # Se il parametro non è un numero valido, restituisci un errore
+                return Response(
+                    {"error": "Il parametro 'numero_ospiti' deve essere un numero intero valido."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         # Usa lo stesso serializer della lista per consistenza
         serializer = AlloggioListSerializer(alloggi_disponibili, many=True, context={'request': request})

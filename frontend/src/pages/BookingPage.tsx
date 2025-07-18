@@ -19,7 +19,7 @@ const BookingPage: React.FC = () => {
   const location = useLocation();
 
   const stateFromLocation = location.state as BookingPageState || {};
-  
+    
   const [alloggio, setAlloggio] = useState<AlloggioData | null>(stateFromLocation.alloggio || null);
   const [loading, setLoading] = useState(!stateFromLocation.alloggio);
   const [error, setError] = useState<string | null>(null);

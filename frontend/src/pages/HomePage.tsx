@@ -30,6 +30,7 @@ const HomePage: React.FC = () => {
   const [searchParams, setSearchParams] = useState({
     checkin: '',
     checkout: '',
+    ospiti: 1,
   });
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -64,11 +65,12 @@ const HomePage: React.FC = () => {
     }
   ];
   
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const { id, value } = e.target;
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { // Aggiungi HTMLSelectElement
+    const { id, value } = e.target;
+    const valoreDaSalvare = id === 'ospiti' ? parseInt(value, 10) : value;
     setSearchParams(prev => ({
       ...prev,
-      [id]: value,
+      [id]: valoreDaSalvare,
     }));
   };
 
@@ -87,18 +89,18 @@ const HomePage: React.FC = () => {
     setIsSearching(true);
 
     try {
-      // Chiamata API
       const results = await apiService.cercaDisponibilita(
         searchParams.checkin,
-        searchParams.checkout
+        searchParams.checkout,
+        searchParams.ospiti
       );
 
-      // Navigazione alla pagina dei risultati con i dati
       navigate('/risultati-disponibilita', {
         state: {
           results: results,
           checkIn: searchParams.checkin,
           checkOut: searchParams.checkout,
+          numeroOspiti: searchParams.ospiti,
         },
       });
 
@@ -217,16 +219,34 @@ const HomePage: React.FC = () => {
             min={new Date().toISOString().split('T')[0]} // Imposta data minima a oggi
           />
         </div>
+                  {/* Box Check-out */}
+          <div className={styles.inputGroup}>
+            <label htmlFor="checkout">Check-out</label>
+            <input
+              type="date"
+              id="checkout"
+              value={searchParams.checkout}
+              onChange={handleDateChange}
+              min={searchParams.checkin || new Date().toISOString().split('T')[0]}
+              />
+            </div>
         <div className={styles.inputGroup}>
-          <label htmlFor="checkout">Check-out</label>
-          <input
-            type="date"
-            id="checkout"
-            value={searchParams.checkout}
-            onChange={handleDateChange}
-            min={searchParams.checkin || new Date().toISOString().split('T')[0]} // Data minima dinamica
-          />
-        </div>
+            <label htmlFor="ospiti">Ospiti</label>
+            <select 
+              id="ospiti" 
+              value={searchParams.ospiti} 
+              onChange={handleDateChange}
+              >
+              <option value="1">1 ospite</option>
+              <option value="2">2 ospiti</option>
+              <option value="3">3 ospiti</option>
+              <option value="4">4 ospiti</option>
+              <option value="5">5 ospiti</option>
+              <option value="6">6 ospiti</option>
+              <option value="7">7 ospiti</option>
+              <option value="8">8+ ospiti</option>
+              </select>
+            </div>
           </div>
           {/* Mostra errore di ricerca se presente */}
           {searchError && <p className={styles.errorMessage}>{searchError}</p>}

@@ -10,14 +10,15 @@ const AvailabilityResultsPage: React.FC = () => {
   const navigate = useNavigate();
 
   // Estrai i dati passati tramite lo stato della navigazione
-  const { results, checkIn, checkOut } = location.state || { results: [], checkIn: '', checkOut: '' };
-
+  const { results, checkIn, checkOut, numeroOspiti } = location.state || { results: [], checkIn: '', checkOut: '', numeroOspiti: 1 };
+  
   const handlePrenotaClick = (alloggioId: number) => {
     // Naviga alla pagina di prenotazione, passando le date per la pre-compilazione
     navigate(`/prenotazioni/${alloggioId}`, {
       state: {
         checkIn,
         checkOut,
+        numeroOspiti,
       },
     });
   };
