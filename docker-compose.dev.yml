@@ -38,12 +38,14 @@ services:
 
   mailhog:
     image: mailhog/mailhog
+    container_name: portale_mailhog
     logging:
-      driver: 'none' # Opzionale: disabilita i log di Mailhog per non intasare la console
+      driver: 'none'
     ports:
-      - "8025:8025" # Interfaccia web di Mailhog
-      - "1025:1025" # Porta SMTP di Mailhog
-
+      - "8025:8025"  # Interfaccia web
+      - "1025:1025"  # SMTP
+    networks:
+      - backend-network
 
   frontend:
     # Sovrascrive il CMD del Dockerfile per usare il server di sviluppo di React

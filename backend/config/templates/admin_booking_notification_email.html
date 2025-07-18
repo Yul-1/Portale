@@ -30,8 +30,8 @@
                 <p><strong>Ospite:</strong> <span class="highlight">{{ prenotazione.ospite_nome }}</span></p>
                 <p><strong>Email Ospite:</strong> {{ prenotazione.ospite_email }}</p>
                 <p><strong>Telefono Ospite:</strong> {{ prenotazione.ospite_telefono }}</p>
-                <p><strong>Check-in:</strong> <span class="highlight">{{ prenotazione.data_checkin|date:"d/m/Y" }}</span></p>
-                <p><strong>Check-out:</strong> <span class="highlight">{{ prenotazione.data_checkout|date:"d/m/Y" }}</span></p>
+                <p><strong>Check-in:</strong> <span class="highlight">{{ prenotazione.check_in|date:"d/m/Y" }}</span></p>
+                <p><strong>Check-out:</strong> <span class="highlight">{{ prenotazione.check_out|date:"d/m/Y" }}</span></p>
                 <p><strong>Numero Ospiti:</strong> {{ prenotazione.numero_ospiti }}</p>
                 <p><strong>Prezzo Totale:</strong> <span class="highlight">{{ prenotazione.prezzo_totale }} €</span></p>
             </div>

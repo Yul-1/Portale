@@ -290,8 +290,8 @@ class PrenotazioneViewSet(viewsets.ModelViewSet):
             Dettagli della Prenotazione:
             Alloggio: {alloggio.nome}
             Posizione: {alloggio.posizione}
-            Check-in: {prenotazione.data_checkin.strftime('%d/%m/%Y')}
-            Check-out: {prenotazione.data_checkout.strftime('%d/%m/%Y')}
+            Check-in: {prenotazione.check_in.strftime('%d/%m/%Y')}
+            Check-out: {prenotazione.check_out.strftime('%d/%m/%Y')}
             Numero Ospiti: {prenotazione.numero_ospiti}
             Prezzo Totale: {prenotazione.prezzo_totale} €
             ID Prenotazione: {prenotazione.id}
@@ -329,8 +329,8 @@ class PrenotazioneViewSet(viewsets.ModelViewSet):
             Ospite: {prenotazione.ospite_nome}
             Email Ospite: {prenotazione.ospite_email}
             Telefono Ospite: {prenotazione.ospite_telefono}
-            Check-in: {prenotazione.data_checkin.strftime('%d/%m/%Y')}
-            Check-out: {prenotazione.data_checkout.strftime('%d/%m/%Y')}
+            Check-in: {prenotazione.check_in.strftime('%d/%m/%Y')}
+            Check-out: {prenotazione.check_out.strftime('%d/%m/%Y')}
             Numero Ospiti: {prenotazione.numero_ospiti}
             Prezzo Totale: {prenotazione.prezzo_totale} €
 

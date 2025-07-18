@@ -26,8 +26,8 @@
                 <h3>Dettagli della Prenotazione:</h3>
                 <p><strong>Alloggio:</strong> <span class="highlight">{{ alloggio.nome }}</span></p>
                 <p><strong>Posizione:</strong> {{ alloggio.posizione }}</p>
-                <p><strong>Check-in:</strong> <span class="highlight">{{ prenotazione.data_checkin|date:"d/m/Y" }}</span></p>
-                <p><strong>Check-out:</strong> <span class="highlight">{{ prenotazione.data_checkout|date:"d/m/Y" }}</span></p>
+                <p><strong>Check-in:</strong> <span class="highlight">{{ prenotazione.check_in|date:"d/m/Y" }}</span></p>
+                <p><strong>Check-out:</strong> <span class="highlight">{{ prenotazione.check_out|date:"d/m/Y" }}</span></p>
                 <p><strong>Numero Ospiti:</strong> {{ prenotazione.numero_ospiti }}</p>
                 <p><strong>Prezzo Totale:</strong> <span class="highlight">{{ prenotazione.prezzo_totale }} €</span></p>
                 <p><strong>ID Prenotazione:</strong> {{ prenotazione.id }}</p>
